@@ -1,0 +1,24 @@
+ version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"  # Map the application's port to a host port if needed
+    volumes:
+      - .:/app      # Mount the current directory into the container for development (optional)
+    environment:
+      - ENV_VAR=value  # Set environment variables as needed
+    depends_on:
+      - database     # Add other services your app depends on (e.g., RabbitMQ)
+
+  database:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"  # Map the PostgreSQL port to a host port (optional)
+
