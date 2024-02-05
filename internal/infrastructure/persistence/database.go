@@ -24,14 +24,30 @@ type DB interface {
 	GetTasksFromUser(userId string) ([]domain.Task, error)
 }
 
+type RepositoryInterface interface {
+	GetTasksFromUser(userId string) ([]domain.Task, error)
+}
+
 type Repository struct {
 	db DB
 }
 
-func NewRepository(db DB) *Repository {
+type MemoryRepository struct {
+	memoryDb map[string][]domain.Task
+}
+
+func NewRepository(db DB) RepositoryInterface {
 	return &Repository{db: db}
+}
+
+func NewMemoryRepository() RepositoryInterface {
+	return &MemoryRepository{}
 }
 
 func (r *Repository) GetTasksFromUser(userId string) ([]domain.Task, error) {
 	return r.db.GetTasksFromUser(userId)
+}
+
+func (m *MemoryRepository) GetTasksFromUser(userId string) ([]domain.Task, error) {
+	return m.memoryDb[userId], nil
 }

@@ -35,7 +35,8 @@ func main() {
 	// Initialize application services
 	// appService := app.NewService(db, rabbitMQ)
 
-	repo := persistence.NewRepository(&persistence.Database{Host: "", Port: 3126})
+	// repo := persistence.NewRepository(&persistence.Database{Host: "", Port: 3126})
+	repo := persistence.NewMemoryRepository()
 	service := app.NewService(repo)
 
 	router := echo.New()
