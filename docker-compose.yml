@@ -1,11 +1,12 @@
- version: '3'
+version: '3'
 services:
   app:
+    container_name: app
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"  # Map the application's port to a host port if needed
+      - "3333:3333"  # Map the application's port to a host port if needed
     volumes:
       - .:/app      # Mount the current directory into the container for development (optional)
     environment:

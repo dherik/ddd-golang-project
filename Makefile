@@ -4,7 +4,7 @@ GOBUILD := $(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST := $(GOCMD) test
 BINARY_NAME := ddd-task
-MAIN_FILE := cmd/main.go
+MAIN_FILE := main.go
 
 # Define targets and their commands
 build:

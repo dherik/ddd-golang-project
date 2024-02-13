@@ -1,5 +1,28 @@
 # ddd-golang-project
 
+## How to run
+
+Build:
+
+```
+docker compose build
+```
+
+## All itens considered
+
+With technical justification.
+
+- docker-compose for development. Every single project should have it
+- README.md with all information to maintain and run. Description about what it does
+- Unit tests
+- Integration tests
+- Dockerfile with optimizations
+- Database with optimizations
+- REST with response headers
+- commit messages using https://www.conventionalcommits.org/en/v1.0.0/
+
+## Structure
+
 ```
 my-ddd-app/
 ├── cmd/
