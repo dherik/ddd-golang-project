@@ -1,6 +1,9 @@
 package app
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
@@ -30,22 +33,22 @@ func (s *Service) AddTaskToUser(taskRequest TaskRequest) {
 func (s *Service) GetTasks(userId string) []TaskResponse {
 	var tasks []domain.Task
 	tasks, _ = s.DB.GetTasksFromUser(userId)
+	slog.Info(fmt.Sprintf("Found %d tasks for user with id %s", len(tasks), userId))
 	var taskResponses []TaskResponse
-
 	for _, task := range tasks {
-		var taskResponse TaskResponse
-		copy(task, &taskResponse)
-		taskResponses = append(taskResponses, taskResponse)
+		tr := copyResponse(task)
+		taskResponses = append(taskResponses, tr)
 	}
 
 	return taskResponses
 }
 
-func copy(task domain.Task, taskResponse *TaskResponse) TaskResponse {
-	return TaskResponse{
+func copyResponse(task domain.Task) TaskResponse {
+	tr := TaskResponse{
 		UserId:      task.UserId,
 		Description: task.Description,
 	}
+	return tr
 }
 
 func copyRequest(taskRequest *TaskRequest) domain.Task {

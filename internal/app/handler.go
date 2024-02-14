@@ -24,13 +24,13 @@ func SetupHandler(router *echo.Echo, service *Service) {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
 
-	router.GET("/tasks", func(c echo.Context) error {
+	router.GET("/tasks/:id", func(c echo.Context) error {
 		// tasks := []TaskResponse{
 		// 	{"1", "Task 1"},
 		// 	{"2", "Task 2"},
 		// }
 		slog.Info("Get all tasks from user")
-		tasks := service.GetTasks("userId") //FIXME
+		tasks := service.GetTasks(c.Param("id")) //FIXME
 		return c.JSONPretty(http.StatusOK, tasks, " ")
 	})
 

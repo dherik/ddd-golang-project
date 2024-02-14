@@ -24,6 +24,7 @@ With technical justification.
 - commit messages using https://www.conventionalcommits.org/en/v1.0.0/
 - Using slog
 - Using Makefile
+- launch.json for VSCode ready for debugging
 
 ## Structure
 

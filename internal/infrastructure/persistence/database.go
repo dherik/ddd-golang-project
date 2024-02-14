@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
@@ -74,5 +75,7 @@ func (r *Repository) GetTasksFromUser(userId string) ([]domain.Task, error) {
 }
 
 func (m *MemoryRepository) GetTasksFromUser(userId string) ([]domain.Task, error) {
+	slog.Info(fmt.Sprintf("MemoryDB: %s", m.memoryDb))
+	slog.Info(fmt.Sprintf("UserId: %s", userId))
 	return m.memoryDb[userId], nil
 }
