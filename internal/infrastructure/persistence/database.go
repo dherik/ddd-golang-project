@@ -1,8 +1,8 @@
 package persistence
 
 import (
-	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
@@ -28,15 +28,22 @@ func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
 type DB interface {
 	GetTasksFromUser(userId string) ([]domain.Task, error)
 	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
+	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
 }
 
 type RepositoryInterface interface {
 	GetTasksFromUser(userId string) ([]domain.Task, error)
 	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
+	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
 }
 
 type Repository struct {
 	db DB
+}
+
+// FindTasks implements RepositoryInterface.
+func (*Repository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+	panic("unimplemented")
 }
 
 // AddTaskToUser implements RepositoryInterface.
@@ -46,6 +53,18 @@ func (*Repository) AddTaskToUser(userId string, task domain.Task) (domain.Task, 
 
 type MemoryRepository struct {
 	memoryDb map[string][]domain.Task
+}
+
+// FindTasks implements RepositoryInterface.
+func (m *MemoryRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+	var result []domain.Task
+	tasks := m.memoryDb["1"]
+	for _, task := range tasks {
+		if task.CreatedAt.After(startDate) && task.CreatedAt.Before(endDate) {
+			result = append(result, task)
+		}
+	}
+	return result, nil
 }
 
 // AddTaskToUser implements RepositoryInterface.
@@ -75,7 +94,5 @@ func (r *Repository) GetTasksFromUser(userId string) ([]domain.Task, error) {
 }
 
 func (m *MemoryRepository) GetTasksFromUser(userId string) ([]domain.Task, error) {
-	slog.Info(fmt.Sprintf("MemoryDB: %s", m.memoryDb))
-	slog.Info(fmt.Sprintf("UserId: %s", userId))
 	return m.memoryDb[userId], nil
 }

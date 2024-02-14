@@ -32,6 +32,18 @@ func SetupHandler(router *echo.Echo, service *Service) {
 		return c.JSONPretty(http.StatusOK, tasks, " ")
 	})
 
+	router.GET("/tasks", func(c echo.Context) error {
+		startDateParam := c.QueryParam("startDate")
+		endDateParam := c.QueryParam("endDate")
+		startDate, err := time.Parse(time.RFC3339, startDateParam)
+		if err != nil {
+			panic(err)
+		}
+		endDate, _ := time.Parse(time.RFC3339, endDateParam)
+		tasks, _ := service.FindTasks(startDate, endDate)
+		return c.JSONPretty(http.StatusOK, tasks, "")
+	})
+
 	router.POST("/tasks", func(c echo.Context) error {
 		slog.Info("Add new task for user")
 		t := TaskRequest{}
