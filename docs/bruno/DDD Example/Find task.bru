@@ -1,0 +1,17 @@
+meta {
+  name: Find task
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:3333/tasks?startDate=2024-02-10T15:04:05Z&endDate=2024-02-20T15:04:05Z
+  body: none
+  auth: none
+}
+
+query {
+  startDate: 2024-02-10T15:04:05Z
+  endDate: 2024-02-20T15:04:05Z
+  ~userId: 
+}
