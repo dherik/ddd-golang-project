@@ -2,10 +2,12 @@
 
 ## How to run
 
-Build:
+### Local
 
-```
-docker compose build
+Just run:
+
+```sh
+docker compose up
 ```
 
 ## All itens considered
@@ -20,6 +22,8 @@ With technical justification.
 - Database with optimizations
 - REST with response headers
 - commit messages using https://www.conventionalcommits.org/en/v1.0.0/
+- Using slog
+- Using Makefile
 
 ## Structure
 

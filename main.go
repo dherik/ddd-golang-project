@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
 	"github.com/dherik/ddd-golang-project/internal/config"
@@ -13,9 +13,9 @@ func main() {
 	// Load application configuration
 	cfg, err := config.LoadConfig("config.yaml")
 
-	log.Println(cfg.HTTPPort)
+	slog.Info("Port being used", slog.Int("Port", cfg.HTTPPort))
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		slog.Error("Failed to load configuration: %v", err)
 	}
 
 	// Initialize database connection

@@ -3,7 +3,7 @@ GOCMD := go
 GOBUILD := $(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST := $(GOCMD) test
-BINARY_NAME := ddd-task
+BINARY_NAME := main
 MAIN_FILE := main.go
 
 # Define targets and their commands

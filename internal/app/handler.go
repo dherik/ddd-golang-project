@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -23,6 +24,7 @@ func SetupHandler(router *echo.Echo, service *Service) {
 		// 	{"1", "Task 1"},
 		// 	{"2", "Task 2"},
 		// }
+		slog.Info("Get all tasks")
 		tasks := service.GetTasks("userId") //FIXME
 		return c.JSONPretty(http.StatusOK, tasks, " ")
 	})
