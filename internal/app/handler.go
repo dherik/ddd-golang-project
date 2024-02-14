@@ -3,14 +3,16 @@ package app
 import (
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
 
 type TaskResponse struct {
-	Id          int    `json:"id"`
-	Description string `json:"description"`
-	UserId      string `json:"userId"` //FIXME user.id
+	Id          int       `json:"id"`
+	Description string    `json:"description"`
+	UserId      string    `json:"userId"` //FIXME user.id
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type TaskRequest struct {

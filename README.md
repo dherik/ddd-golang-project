@@ -25,6 +25,7 @@ With technical justification.
 - Using slog
 - Using Makefile
 - launch.json for VSCode ready for debugging
+- Save dates as UTC (and local?)
 
 ## Structure
 

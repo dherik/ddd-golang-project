@@ -47,13 +47,11 @@ func copyResponse(task domain.Task) TaskResponse {
 	tr := TaskResponse{
 		UserId:      task.UserId,
 		Description: task.Description,
+		CreatedAt:   task.CreatedAt,
 	}
 	return tr
 }
 
 func copyRequest(taskRequest *TaskRequest) domain.Task {
-	return domain.Task{
-		UserId:      taskRequest.UserId,
-		Description: taskRequest.Description,
-	}
+	return domain.NewTask(taskRequest.UserId, taskRequest.Description)
 }
