@@ -10,7 +10,12 @@ import (
 type TaskResponse struct {
 	Id          int    `json:"id"`
 	Description string `json:"description"`
-	UserId      int    `json:"userId"` //FIXME user.id
+	UserId      string `json:"userId"` //FIXME user.id
+}
+
+type TaskRequest struct {
+	Description string `json:"description"`
+	UserId      string `json:"userId"` //FIXME user.id
 }
 
 func SetupHandler(router *echo.Echo, service *Service) {
@@ -24,14 +29,24 @@ func SetupHandler(router *echo.Echo, service *Service) {
 		// 	{"1", "Task 1"},
 		// 	{"2", "Task 2"},
 		// }
-		slog.Info("Get all tasks")
+		slog.Info("Get all tasks from user")
 		tasks := service.GetTasks("userId") //FIXME
 		return c.JSONPretty(http.StatusOK, tasks, " ")
 	})
 
-	// router.POST("/tasks", func(c echo.Context) error {
+	router.POST("/tasks", func(c echo.Context) error {
+		// service.AddTask
+		slog.Info("Add new task for user")
+		t := TaskRequest{}
+		if err := c.Bind(&t); err != nil {
+			slog.Error("Error reading task body", slog.String("error", err.Error()))
+			return err //FIXME
+		}
 
-	// })
+		service.AddTaskToUser(t)
+
+		return c.JSONPretty(http.StatusCreated, nil, "")
+	})
 
 	// router.Route("/tasks", func(r chi.Router) {
 	// 	r.Get("/", searchTasks)

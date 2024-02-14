@@ -22,6 +22,11 @@ func NewService(db persistence.DB) *Service {
 	return &Service{DB: db}
 }
 
+func (s *Service) AddTaskToUser(taskRequest TaskRequest) {
+	t := copyRequest(&taskRequest)
+	s.DB.AddTaskToUser(t.UserId, t)
+}
+
 func (s *Service) GetTasks(userId string) []TaskResponse {
 	var tasks []domain.Task
 	tasks, _ = s.DB.GetTasksFromUser(userId)
@@ -40,5 +45,12 @@ func copy(task domain.Task, taskResponse *TaskResponse) TaskResponse {
 	return TaskResponse{
 		UserId:      task.UserId,
 		Description: task.Description,
+	}
+}
+
+func copyRequest(taskRequest *TaskRequest) domain.Task {
+	return domain.Task{
+		UserId:      taskRequest.UserId,
+		Description: taskRequest.Description,
 	}
 }

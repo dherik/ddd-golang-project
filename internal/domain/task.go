@@ -1,6 +1,6 @@
 package domain
 
 type Task struct {
-	UserId int
+	UserId      string
 	Description string
 }

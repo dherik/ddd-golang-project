@@ -1,6 +1,10 @@
 package persistence
 
-import "github.com/dherik/ddd-golang-project/internal/domain"
+import (
+	"log/slog"
+
+	"github.com/dherik/ddd-golang-project/internal/domain"
+)
 
 type Database struct {
 	Host string
@@ -12,8 +16,8 @@ func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
 	var tasks []domain.Task
 
 	tasks = []domain.Task{
-		{UserId: 1, Description: "Task 1"},
-		{UserId: 2, Description: "Task 2"},
+		{UserId: "1", Description: "Task 1"},
+		{UserId: "2", Description: "Task 2"},
 	}
 
 	return tasks, nil
@@ -22,18 +26,39 @@ func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
 
 type DB interface {
 	GetTasksFromUser(userId string) ([]domain.Task, error)
+	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
 }
 
 type RepositoryInterface interface {
 	GetTasksFromUser(userId string) ([]domain.Task, error)
+	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
 }
 
 type Repository struct {
 	db DB
 }
 
+// AddTaskToUser implements RepositoryInterface.
+func (*Repository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+	panic("unimplemented")
+}
+
 type MemoryRepository struct {
 	memoryDb map[string][]domain.Task
+}
+
+// AddTaskToUser implements RepositoryInterface.
+func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+	_, ok := m.memoryDb[userId]
+	if ok {
+		m.memoryDb[userId] = append(m.memoryDb[userId], task)
+		slog.Info("User cache already exists and element added")
+	} else {
+		slog.Info("User cache create and element added")
+		m.memoryDb = make(map[string][]domain.Task)
+		m.memoryDb[userId] = []domain.Task{task}
+	}
+	return task, nil
 }
 
 func NewRepository(db DB) RepositoryInterface {
