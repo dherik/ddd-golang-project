@@ -15,14 +15,14 @@ type UserRepository interface {
 }
 
 // TaskRepository defines the contract for managing task data.
-type TaskRepository interface {
-	Create(task *Task) error
-	Update(task *Task) error
-	Delete(taskID int) error
-	FindByID(taskID int) (*Task, error)
-	FindAllByUserID(userID int) ([]*Task, error)
-	// Add more methods as needed for task-related data operations
-}
+// type TaskRepository interface {
+// 	Create(task *Task) error
+// 	Update(task *Task) error
+// 	Delete(taskID int) error
+// 	FindByID(taskID int) (*Task, error)
+// 	FindAllByUserID(userID int) ([]*Task, error)
+// 	// Add more methods as needed for task-related data operations
+// }
 
 var m = make(map[string][]*Task, 0)
 

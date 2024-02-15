@@ -25,20 +25,20 @@ func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
 
 }
 
-type DB interface {
-	GetTasksFromUser(userId string) ([]domain.Task, error)
-	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
-	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
-}
+// type DB interface {
+// 	GetTasksFromUser(userId string) ([]domain.Task, error)
+// 	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
+// 	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
+// }
 
-type RepositoryInterface interface {
-	GetTasksFromUser(userId string) ([]domain.Task, error)
+type TaskRepository interface {
+	Get(userId string) ([]domain.Task, error)
 	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
 	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
 }
 
 type Repository struct {
-	db DB
+	db TaskRepository
 }
 
 // FindTasks implements RepositoryInterface.
@@ -52,13 +52,13 @@ func (*Repository) AddTaskToUser(userId string, task domain.Task) (domain.Task, 
 }
 
 type MemoryRepository struct {
-	memoryDb map[string][]domain.Task
+	tasks map[string][]domain.Task
 }
 
 // FindTasks implements RepositoryInterface.
 func (m *MemoryRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
 	var result []domain.Task
-	tasks := m.memoryDb["1"]
+	tasks := m.tasks["1"]
 	for _, task := range tasks {
 		if task.CreatedAt.After(startDate) && task.CreatedAt.Before(endDate) {
 			result = append(result, task)
@@ -69,30 +69,32 @@ func (m *MemoryRepository) FindTasks(startDate time.Time, endDate time.Time) ([]
 
 // AddTaskToUser implements RepositoryInterface.
 func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
-	_, ok := m.memoryDb[userId]
+	_, ok := m.tasks[userId]
 	if ok {
-		m.memoryDb[userId] = append(m.memoryDb[userId], task)
+		m.tasks[userId] = append(m.tasks[userId], task)
 		slog.Info("User cache already exists and element added")
 	} else {
 		slog.Info("User cache create and element added")
-		m.memoryDb = make(map[string][]domain.Task)
-		m.memoryDb[userId] = []domain.Task{task}
+		// m.tasks = make(map[string][]domain.Task)
+		m.tasks[userId] = []domain.Task{task}
 	}
 	return task, nil
 }
 
-func NewRepository(db DB) RepositoryInterface {
+func NewRepository(db TaskRepository) TaskRepository {
 	return &Repository{db: db}
 }
 
-func NewMemoryRepository() RepositoryInterface {
-	return &MemoryRepository{}
+func NewMemoryRepository() TaskRepository {
+	return &MemoryRepository{
+		tasks: make(map[string][]domain.Task),
+	}
 }
 
-func (r *Repository) GetTasksFromUser(userId string) ([]domain.Task, error) {
-	return r.db.GetTasksFromUser(userId)
+func (r *Repository) Get(userId string) ([]domain.Task, error) {
+	return r.db.Get(userId)
 }
 
-func (m *MemoryRepository) GetTasksFromUser(userId string) ([]domain.Task, error) {
-	return m.memoryDb[userId], nil
+func (m *MemoryRepository) Get(userId string) ([]domain.Task, error) {
+	return m.tasks[userId], nil
 }

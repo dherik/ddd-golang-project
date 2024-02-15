@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
-	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
 type Service struct {
-	DB persistence.DB
+	DB domain.TaskRepository
 }
 
 // func (s Service) GetTasks(userId string) []TaskResponse {
@@ -22,7 +21,7 @@ type IService interface {
 	GetTasks(userId string) []TaskResponse
 }
 
-func NewService(db persistence.DB) *Service {
+func NewService(db domain.TaskRepository) *Service {
 	return &Service{DB: db}
 }
 
@@ -40,7 +39,7 @@ func (s *Service) FindTasks(startDate time.Time, endDate time.Time) ([]TaskRespo
 
 func (s *Service) GetTasks(userId string) []TaskResponse {
 	var tasks []domain.Task
-	tasks, _ = s.DB.GetTasksFromUser(userId)
+	tasks, _ = s.DB.Get(userId)
 	slog.Info(fmt.Sprintf("Found %d tasks for user with id %s", len(tasks), userId))
 	taskResponses := toResponse(tasks)
 	return taskResponses
