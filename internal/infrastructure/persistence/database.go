@@ -14,9 +14,8 @@ type Database struct {
 
 func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
 	// implements db interface
-	var tasks []domain.Task
 
-	tasks = []domain.Task{
+	var tasks = []domain.Task{
 		{UserId: "1", Description: "Task 1"},
 		{UserId: "2", Description: "Task 2"},
 	}
@@ -24,12 +23,6 @@ func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
 	return tasks, nil
 
 }
-
-// type DB interface {
-// 	GetTasksFromUser(userId string) ([]domain.Task, error)
-// 	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
-// 	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
-// }
 
 type TaskRepository interface {
 	Get(userId string) ([]domain.Task, error)
