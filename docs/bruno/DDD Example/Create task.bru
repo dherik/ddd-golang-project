@@ -1,17 +1,17 @@
 meta {
   name: Create task
   type: http
-  seq: 3
+  seq: 4
 }
 
 post {
   url: http://localhost:3333/tasks
   body: json
-  auth: none
+  auth: bearer
 }
 
-headers {
-  Content-Type: application/json
+auth:bearer {
+  token: {{token}}
 }
 
 body:json {

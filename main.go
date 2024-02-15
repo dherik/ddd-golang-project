@@ -39,7 +39,8 @@ func main() {
 	repo := persistence.NewMemoryRepository()
 	service := app.NewService(repo)
 
-	router := echo.New()
-	app.SetupHandler(router, service)
-	router.Logger.Fatal(router.Start(":3333"))
+	e := echo.New()
+
+	app.SetupHandler(e, service)
+	e.Logger.Fatal(e.Start(":3333"))
 }
