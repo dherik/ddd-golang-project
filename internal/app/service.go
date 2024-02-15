@@ -8,38 +8,29 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
-type Service struct {
-	DB domain.TaskRepository
+type TaskService struct {
+	taskRepository domain.TaskRepository
 }
 
-// func (s Service) GetTasks(userId string) []TaskResponse {
-// 	var tasks []TaskResponse
-// 	return tasks
-// }
-
-type IService interface {
-	GetTasks(userId string) []TaskResponse
+func NewTaskService(taskRepository domain.TaskRepository) *TaskService {
+	return &TaskService{taskRepository: taskRepository}
 }
 
-func NewService(db domain.TaskRepository) *Service {
-	return &Service{DB: db}
-}
-
-func (s *Service) AddTaskToUser(taskRequest TaskRequest) {
+func (s *TaskService) AddTaskToUser(taskRequest TaskRequest) {
 	t := copyRequest(&taskRequest)
-	s.DB.AddTaskToUser(t.UserId, t)
+	s.taskRepository.AddTaskToUser(t.UserId, t)
 }
 
-func (s *Service) FindTasks(startDate time.Time, endDate time.Time) ([]TaskResponse, error) {
+func (s *TaskService) FindTasks(startDate time.Time, endDate time.Time) ([]TaskResponse, error) {
 	slog.Info(fmt.Sprintf("Find tasks between %s and %s", startDate, endDate))
-	tasks, _ := s.DB.FindTasks(startDate, endDate)
+	tasks, _ := s.taskRepository.FindTasks(startDate, endDate)
 	taskResponses := toResponse(tasks)
 	return taskResponses, nil
 }
 
-func (s *Service) GetTasks(userId string) []TaskResponse {
+func (s *TaskService) GetTasks(userId string) []TaskResponse {
 	var tasks []domain.Task
-	tasks, _ = s.DB.Get(userId)
+	tasks, _ = s.taskRepository.Get(userId)
 	slog.Info(fmt.Sprintf("Found %d tasks for user with id %s", len(tasks), userId))
 	taskResponses := toResponse(tasks)
 	return taskResponses

@@ -37,7 +37,7 @@ func main() {
 
 	// taskRepository := persistence.NewRepository(&persistence.Database{Host: "", Port: 3126})
 	taskRepository := persistence.NewMemoryRepository()
-	service := app.NewService(taskRepository)
+	service := app.NewTaskService(taskRepository)
 
 	e := echo.New()
 

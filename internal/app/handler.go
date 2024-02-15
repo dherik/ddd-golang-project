@@ -32,7 +32,7 @@ type jwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func SetupHandler(e *echo.Echo, service *Service) {
+func SetupHandler(e *echo.Echo, service *TaskService) {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
