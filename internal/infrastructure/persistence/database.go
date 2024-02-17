@@ -46,14 +46,15 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 		"password=%s dbname=%s sslmode=disable",
 		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
 
-	log.Info(psqlInfo)
+	// log.Info(psqlInfo)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
-	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task`)
+	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task 
+		where created_at >= $1 AND created_at <= $2`, startDate, endDate)
 
 	tasks := []domain.Task{}
 	for rows.Next() {
@@ -112,9 +113,34 @@ func NewMemoryRepository() TaskRepository {
 	}
 }
 
-func (r *PostgreRepository) Get(userId string) ([]domain.Task, error) {
-	// return r.db.Get(userId)
-	return nil, nil
+func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task 
+		where user_id = $1`, userId)
+
+	tasks := []domain.Task{}
+	for rows.Next() {
+		var task domain.Task
+		err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
+		if err != nil {
+			// t.Fatalf("Scan: %v", err)
+			log.Error(err)
+			return []domain.Task{}, err
+		}
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
 }
 
 func (m *MemoryRepository) Get(userId string) ([]domain.Task, error) {
