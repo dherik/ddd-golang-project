@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS Task (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
+    user_id INTEGER NOT NULL,
     description VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -27,5 +27,5 @@ INSERT INTO "User" (username, email) VALUES
     ('jane_smith', 'jane.smith@example.com');
 
 INSERT INTO Task (user_id, description) VALUES
-    ("1", 'Complete project proposal'),
-    ("2", 'Review code for bug fixes');
+    (1, 'Complete project proposal'),
+    (2, 'Review code for bug fixes');
