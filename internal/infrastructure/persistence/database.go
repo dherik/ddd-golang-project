@@ -73,10 +73,10 @@ func (pg *PostgreRepository) AddTaskToUser(userId string, task domain.Task) (dom
 		VALUES($1, $2, $3) RETURNING id`, task.UserId, task.Description, task.CreatedAt).Scan(&id)
 
 	if err != nil {
-		return domain.Task{}, fmt.Errorf("failed insert task to database: %w", err)
+		return domain.Task{}, fmt.Errorf("failed to insert task to database: %w", err)
 	}
 
-	task.Id = id // FIXME
+	task.Id = id // FIXME find task again using id
 	return task, nil
 
 }
