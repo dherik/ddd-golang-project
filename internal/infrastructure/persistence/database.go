@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
-	"github.com/labstack/gommon/log"
 	_ "github.com/lib/pq"
 )
 
@@ -18,17 +17,6 @@ type DatabaseConnection struct {
 	Password string
 	Name     string
 }
-
-// func (r *DatabaseConnection) GetTasksFromUser(userId string) ([]domain.Task, error) {
-
-// 	var tasks = []domain.Task{
-// 		{UserId: "1", Description: "Task 1"},
-// 		{UserId: "2", Description: "Task 2"},
-// 	}
-
-// 	return tasks, nil
-
-// }
 
 type TaskRepository interface {
 	Get(userId string) ([]domain.Task, error)
@@ -46,10 +34,9 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 		"password=%s dbname=%s sslmode=disable",
 		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
 
-	// log.Info(psqlInfo)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		return []domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
 	}
 	defer db.Close()
 
@@ -61,9 +48,7 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 		var task domain.Task
 		err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
 		if err != nil {
-			// t.Fatalf("Scan: %v", err)
-			log.Error(err)
-			return []domain.Task{}, err
+			return []domain.Task{}, fmt.Errorf("failed scanning row: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
@@ -97,7 +82,6 @@ func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domai
 		slog.Info("User cache already exists and element added")
 	} else {
 		slog.Info("User cache create and element added")
-		// m.tasks = make(map[string][]domain.Task)
 		m.tasks[userId] = []domain.Task{task}
 	}
 	return task, nil
@@ -121,7 +105,7 @@ func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		return []domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
 	}
 	defer db.Close()
 
@@ -133,9 +117,7 @@ func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
 		var task domain.Task
 		err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
 		if err != nil {
-			// t.Fatalf("Scan: %v", err)
-			log.Error(err)
-			return []domain.Task{}, err
+			return []domain.Task{}, fmt.Errorf("failed scanning row: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
