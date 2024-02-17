@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"os"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
 	"github.com/dherik/ddd-golang-project/internal/config"
@@ -36,7 +37,7 @@ func main() {
 	// appService := app.NewService(db, rabbitMQ)
 
 	taskRepository := persistence.NewRepository(
-		persistence.DatabaseConnection{Host: "postgres", Port: 5432, User: "pguser", Password: "pgpassword", Name: "dddtasks"})
+		persistence.DatabaseConnection{Host: os.Getenv("DB_HOST"), Port: 5432, User: "pguser", Password: "pgpassword", Name: "dddtasks"})
 	// taskRepository := persistence.NewMemoryRepository()
 	service := app.NewTaskService(taskRepository)
 

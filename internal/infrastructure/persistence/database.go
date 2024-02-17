@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
@@ -43,11 +42,9 @@ type PostgreRepository struct {
 
 func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
 
-	dbHost := os.Getenv("DB_HOST")
-
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
-		dbHost, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
+		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
 
 	log.Info(psqlInfo)
 	db, err := sql.Open("postgres", psqlInfo)
