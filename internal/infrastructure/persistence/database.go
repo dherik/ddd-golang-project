@@ -28,16 +28,26 @@ type PostgreRepository struct {
 	DB DatabaseConnection
 }
 
-func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
-
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+func (pg *PostgreRepository) connect() (*sql.DB, error) {
+	ds := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := sql.Open("postgres", ds)
 	if err != nil {
-		return []domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
+		return nil, fmt.Errorf("failed connecting to database: %w", err)
 	}
+
+	return db, nil
+}
+
+func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+
+	db, err := pg.connect()
+	if err != nil {
+		return []domain.Task{}, err
+	}
+
 	defer db.Close()
 
 	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task 
@@ -58,13 +68,9 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 
 func (pg *PostgreRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
-
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := pg.connect()
 	if err != nil {
-		return domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
+		return domain.Task{}, err
 	}
 	defer db.Close()
 
@@ -120,13 +126,9 @@ func NewMemoryRepository() TaskRepository {
 
 func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
-
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := pg.connect()
 	if err != nil {
-		return []domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
+		return []domain.Task{}, err
 	}
 	defer db.Close()
 
