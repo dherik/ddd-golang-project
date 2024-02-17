@@ -56,8 +56,29 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 	return tasks, nil
 }
 
-func (*PostgreRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
-	panic("unimplemented")
+func (pg *PostgreRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
+	}
+	defer db.Close()
+
+	var id int
+	err = db.QueryRow(`INSERT INTO task(user_id, description, created_at)
+		VALUES($1, $2, $3) RETURNING id`, task.UserId, task.Description, task.CreatedAt).Scan(&id)
+
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("failed insert task to database: %w", err)
+	}
+
+	task.Id = id // FIXME
+	return task, nil
+
 }
 
 type MemoryRepository struct {
