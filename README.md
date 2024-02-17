@@ -10,6 +10,12 @@ Just run:
 docker compose up
 ```
 
+To build:
+
+```sh
+docker compose build
+```
+
 ## All itens considered
 
 With technical justification.

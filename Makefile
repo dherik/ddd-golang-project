@@ -18,6 +18,6 @@ clean:
 	rm -f $(BINARY_NAME)
 
 run:
-	./$(BINARY_NAME)
+	DB_HOST=127.0.0.1 ./$(BINARY_NAME)
 
 .PHONY: build test clean

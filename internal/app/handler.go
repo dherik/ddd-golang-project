@@ -40,7 +40,7 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
 		},
-		SigningKey: []byte("secret"),
+		SigningKey: []byte("secret"), //FIXME
 	}
 
 	taskGroup := e.Group("/tasks")

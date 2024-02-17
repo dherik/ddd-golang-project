@@ -10,16 +10,16 @@ services:
     volumes:
       - .:/app      # Mount the current directory into the container for development (optional)
     environment:
-      - ENV_VAR=value  # Set environment variables as needed
+      - DB_HOST=postgres
     depends_on:
-      - database     # Add other services your app depends on (e.g., RabbitMQ)
+      - postgres     # Add other services your app depends on (e.g., RabbitMQ)
 
-  database:
-    image: postgres:13
+  postgres:
+    image: postgres:16.2
     environment:
-      POSTGRES_DB: mydb
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: dddtasks
+      POSTGRES_USER: pguser
+      POSTGRES_PASSWORD: pgpassword
     ports:
       - "5432:5432"  # Map the PostgreSQL port to a host port (optional)
 

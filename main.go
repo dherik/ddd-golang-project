@@ -35,8 +35,9 @@ func main() {
 	// Initialize application services
 	// appService := app.NewService(db, rabbitMQ)
 
-	// taskRepository := persistence.NewRepository(&persistence.Database{Host: "", Port: 3126})
-	taskRepository := persistence.NewMemoryRepository()
+	taskRepository := persistence.NewRepository(
+		persistence.DatabaseConnection{Host: "postgres", Port: 5432, User: "pguser", Password: "pgpassword", Name: "dddtasks"})
+	// taskRepository := persistence.NewMemoryRepository()
 	service := app.NewTaskService(taskRepository)
 
 	e := echo.New()

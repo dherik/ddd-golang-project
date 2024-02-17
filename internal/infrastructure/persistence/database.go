@@ -1,28 +1,35 @@
 package persistence
 
 import (
+	"database/sql"
+	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
+	"github.com/labstack/gommon/log"
+	_ "github.com/lib/pq"
 )
 
-type Database struct {
-	Host string
-	Port int
+type DatabaseConnection struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Name     string
 }
 
-func (r *Database) GetTasksFromUser(userId string) ([]domain.Task, error) {
-	// implements db interface
+// func (r *DatabaseConnection) GetTasksFromUser(userId string) ([]domain.Task, error) {
 
-	var tasks = []domain.Task{
-		{UserId: "1", Description: "Task 1"},
-		{UserId: "2", Description: "Task 2"},
-	}
+// 	var tasks = []domain.Task{
+// 		{UserId: "1", Description: "Task 1"},
+// 		{UserId: "2", Description: "Task 2"},
+// 	}
 
-	return tasks, nil
+// 	return tasks, nil
 
-}
+// }
 
 type TaskRepository interface {
 	Get(userId string) ([]domain.Task, error)
@@ -30,17 +37,38 @@ type TaskRepository interface {
 	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
 }
 
-type Repository struct {
-	db TaskRepository
+type PostgreRepository struct {
+	DB DatabaseConnection
 }
 
-// FindTasks implements RepositoryInterface.
-func (*Repository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
-	panic("unimplemented")
+func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = "postgres"
+	}
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		dbHost, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
+
+	log.Info(psqlInfo)
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Successfully connected!")
+	return []domain.Task{}, nil
 }
 
-// AddTaskToUser implements RepositoryInterface.
-func (*Repository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+func (*PostgreRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
 	panic("unimplemented")
 }
 
@@ -48,7 +76,6 @@ type MemoryRepository struct {
 	tasks map[string][]domain.Task
 }
 
-// FindTasks implements RepositoryInterface.
 func (m *MemoryRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
 	var result []domain.Task
 	tasks := m.tasks["1"]
@@ -60,7 +87,6 @@ func (m *MemoryRepository) FindTasks(startDate time.Time, endDate time.Time) ([]
 	return result, nil
 }
 
-// AddTaskToUser implements RepositoryInterface.
 func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
 	_, ok := m.tasks[userId]
 	if ok {
@@ -74,8 +100,8 @@ func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domai
 	return task, nil
 }
 
-func NewRepository(db TaskRepository) TaskRepository {
-	return &Repository{db: db}
+func NewRepository(db DatabaseConnection) TaskRepository {
+	return &PostgreRepository{DB: db}
 }
 
 func NewMemoryRepository() TaskRepository {
@@ -84,8 +110,9 @@ func NewMemoryRepository() TaskRepository {
 	}
 }
 
-func (r *Repository) Get(userId string) ([]domain.Task, error) {
-	return r.db.Get(userId)
+func (r *PostgreRepository) Get(userId string) ([]domain.Task, error) {
+	// return r.db.Get(userId)
+	return nil, nil
 }
 
 func (m *MemoryRepository) Get(userId string) ([]domain.Task, error) {
