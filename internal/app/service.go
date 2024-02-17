@@ -37,7 +37,7 @@ func (s *TaskService) GetTasks(userId string) []TaskResponse {
 }
 
 func toResponse(tasks []domain.Task) []TaskResponse {
-	var taskResponses []TaskResponse
+	taskResponses := []TaskResponse{}
 	for _, task := range tasks {
 		tr := copyResponse(task)
 		taskResponses = append(taskResponses, tr)
@@ -47,6 +47,7 @@ func toResponse(tasks []domain.Task) []TaskResponse {
 
 func copyResponse(task domain.Task) TaskResponse {
 	tr := TaskResponse{
+		Id:          task.Id,
 		UserId:      task.UserId,
 		Description: task.Description,
 		CreatedAt:   task.CreatedAt,

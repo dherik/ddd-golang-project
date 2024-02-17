@@ -22,4 +22,5 @@ services:
       POSTGRES_PASSWORD: pgpassword
     ports:
       - "5432:5432"  # Map the PostgreSQL port to a host port (optional)
-
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql

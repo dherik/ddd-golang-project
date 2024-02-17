@@ -44,9 +44,6 @@ type PostgreRepository struct {
 func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
 
 	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "postgres"
-	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
@@ -59,13 +56,21 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 	}
 	defer db.Close()
 
-	err = db.Ping()
-	if err != nil {
-		panic(err)
+	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task`)
+
+	tasks := []domain.Task{}
+	for rows.Next() {
+		var task domain.Task
+		err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
+		if err != nil {
+			// t.Fatalf("Scan: %v", err)
+			log.Error(err)
+			return []domain.Task{}, err
+		}
+		tasks = append(tasks, task)
 	}
 
-	fmt.Println("Successfully connected!")
-	return []domain.Task{}, nil
+	return tasks, nil
 }
 
 func (*PostgreRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
