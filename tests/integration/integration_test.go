@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -20,6 +21,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -46,11 +48,11 @@ func (suite *ExampleTestSuite) SetupSuite() {
 		Name:     "test_db",
 	}
 
-	setupDatabase(suite, dataSource)
+	dataSource = setupDatabase(suite, dataSource)
 	startHttpServer(dataSource)
 }
 
-func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) {
+func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) persistence.Datasource {
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 
 	log.Printf("starting docker")
@@ -135,14 +137,9 @@ func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) {
 
 	suite.Pool = *pool
 	suite.Resource = resource
-}
 
-// func loadSQLFile(db, user, pass, host, sqlFile string) error {
-// 	cmd := exec.Command("psql", "-U", user, "-p", pass, "-h", host, "-d", db, "-a", "-q", "-f", sqlFile)
-// 	cmd.Stdout = os.Stdout
-// 	cmd.Stderr = os.Stderr
-// 	return cmd.Run()
-// }
+	return datasource
+}
 
 func startHttpServer(dataSource persistence.Datasource) {
 	serverReady := make(chan bool)
@@ -244,11 +241,55 @@ func login() (string, error) {
 	return "", fmt.Errorf("Login failed. Status code: %d, Response: %s", resp.StatusCode, string(responseBody))
 }
 
-func (s *ExampleTestSuite) TestHttpWithPostgreSQl() {
+func (s *ExampleTestSuite) TestGetByDate() {
 	if testing.Short() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
-	// time.Sleep(4 * time.Second)
+
+	token, _ := login()
+
+	startDate := time.Now().AddDate(0, 0, -5).UTC().Format(time.RFC3339)
+	endDate := time.Now().AddDate(0, 0, 5).UTC().Format(time.RFC3339)
+
+	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
+	slog.Info(fmt.Sprintf("Url: %s", url))
+	req, err := http.NewRequest(http.MethodGet, url, nil) //TODO duplicated port, get from s.port (parametrized)
+	s.NoError(err)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := http.Client{}
+	response, err := client.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusOK, response.StatusCode)
+
+	byteBody, err := io.ReadAll(response.Body)
+	s.NoError(err)
+
+	// s.Equal(`{"id":"1","title":"Hello 1","desc":"Article Description 1","content":"Article Content 1"}`, strings.Trim(string(byteBody), "\n"))
+	// s.Equal(`[]`, strings.Trim(string(byteBody), "\n"))
+	require.JSONEq(s.T(), `[
+		{
+		  "id": 1,
+		  "description": "Complete project proposal",
+		  "userId": "1",
+		  "createdAt": "2024-02-15T10:59:01.054Z"
+		},
+		{
+		  "id": 2,
+		  "description": "Review code for bug fixes",
+		  "userId": "2",
+		  "createdAt": "2024-02-16T21:23:09.066Z"
+		}
+	  ]`, string(byteBody))
+
+	response.Body.Close()
+}
+
+func (s *ExampleTestSuite) TestGetByID() {
+	if testing.Short() {
+		s.T().Skip("Skip test for postgresql repository")
+	}
 
 	token, _ := login()
 
@@ -266,39 +307,16 @@ func (s *ExampleTestSuite) TestHttpWithPostgreSQl() {
 	s.NoError(err)
 
 	// s.Equal(`{"id":"1","title":"Hello 1","desc":"Article Description 1","content":"Article Content 1"}`, strings.Trim(string(byteBody), "\n"))
-	s.Equal(`[]`, strings.Trim(string(byteBody), "\n"))
+
+	require.JSONEq(s.T(), `[
+		{
+		  "id": 1,
+		  "description": "Complete project proposal",
+		  "userId": "1",
+		  "createdAt": "2024-02-15T10:59:01.054Z"
+		}
+	  ]`, string(byteBody))
 	response.Body.Close()
-
-	// Create an instance of Echo.
-	// e := echo.New()
-	// req := httptest.NewRequest(http.MethodGet, "/", nil)
-	// rec := httptest.NewRecorder()
-	// c := e.NewContext(req, rec)
-	// c.SetPath("/tasks/:id")
-	// c.SetParamNames("id")
-	// c.SetParamValues("1")
-
-	// Assertions
-	// if s.NoError(t, h.getUser(c)) {
-	// assert.Equal(t, http.StatusOK, rec.Code)
-	// assert.Equal(t, userJSON, rec.Body.String())
-	// log.Printf(fmt.Sprintf("Status Code: %s", rec.Code))
-	// log.Printf("Body: " + rec.Body.String())
-	// s.Equal(http.StatusOK, rec.Code)
-	// s.Equal("", rec.Body.String())
-	// }
-
-	// client := http.Client{}
-	// response, err := client.Do(req)
-	// s.NoError(err)
-	// s.Equal(http.StatusOK, response.StatusCode)
-
-	// byteBody, err := io.ReadAll(response.Body)
-	// s.NoError(err)
-
-	// s.Equal(`{"id":"1","title":"Hello 1","desc":"Article Description 1","content":"Article Content 1"}`, strings.Trim(string(byteBody), "\n"))
-	// response.Body.Close()
-
 }
 
 // In order for 'go test' to run this suite, we need to create

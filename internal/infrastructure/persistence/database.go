@@ -53,8 +53,12 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 
 	defer db.Close()
 
-	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task 
+	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task 
 		where created_at >= $1 AND created_at <= $2`, startDate, endDate)
+
+	if err != nil {
+		return []domain.Task{}, fmt.Errorf("failed reading rows: %w", err)
+	}
 
 	tasks := []domain.Task{}
 	for rows.Next() {

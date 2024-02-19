@@ -23,7 +23,10 @@ func (s *TaskService) AddTaskToUser(taskRequest TaskRequest) {
 
 func (s *TaskService) FindTasks(startDate time.Time, endDate time.Time) ([]TaskResponse, error) {
 	slog.Info(fmt.Sprintf("Find tasks between %s and %s", startDate, endDate))
-	tasks, _ := s.taskRepository.FindTasks(startDate, endDate)
+	tasks, err := s.taskRepository.FindTasks(startDate, endDate)
+	if err != nil {
+		return []TaskResponse{}, fmt.Errorf("failed finding tasks: %w", err)
+	}
 	taskResponses := toResponse(tasks)
 	return taskResponses, nil
 }

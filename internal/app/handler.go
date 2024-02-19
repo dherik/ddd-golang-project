@@ -54,9 +54,18 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 	taskGroup.GET("", func(c echo.Context) error {
 		startDateParam := c.QueryParam("startDate")
 		endDateParam := c.QueryParam("endDate")
-		startDate, _ := time.Parse(time.RFC3339, startDateParam) //FIXME
-		endDate, _ := time.Parse(time.RFC3339, endDateParam)     //FIXME
-		tasks, _ := service.FindTasks(startDate, endDate)
+		startDate, err := time.Parse(time.RFC3339, startDateParam)
+		if err != nil {
+			return err //FIXME
+		}
+		endDate, err := time.Parse(time.RFC3339, endDateParam)
+		if err != nil {
+			return err //FIXME
+		}
+		tasks, err := service.FindTasks(startDate, endDate)
+		if err != nil {
+			return err //FIXME
+		}
 		return c.JSONPretty(http.StatusOK, tasks, "")
 	})
 
