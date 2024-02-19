@@ -55,7 +55,7 @@ func (suite *ExampleTestSuite) SetupSuite() {
 func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) persistence.Datasource {
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 
-	log.Printf("starting docker")
+	slog.Info("starting docker")
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -95,7 +95,7 @@ func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) p
 	datasource.Port = port
 	databaseUrl := datasource.ConnectionString()
 
-	log.Println("Connecting to database on url: ", databaseUrl)
+	slog.Info(fmt.Sprintf("Connecting to database on url: %s", databaseUrl))
 
 	// code := m.Run()
 	resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
@@ -112,9 +112,7 @@ func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) p
 		log.Fatalf("Could not connect to database: %s", err)
 	}
 
-	log.Printf("connected")
-
-	// loadSQLFile(datasource.Name, datasource.User, datasource.Password, datasource.Host, "../../init.sql")
+	slog.Info("Database for integration tests is up and running!")
 
 	query, err := os.ReadFile("../../init.sql")
 	log.Printf("Load file: " + string(query))
@@ -159,12 +157,12 @@ func waitForService(url string, maxRetries int, retryInterval time.Duration) err
 		response, err := http.Get(url + "/api/health")
 		if err == nil && response.StatusCode == http.StatusOK {
 			// The service is healthy, proceed with your logic
-			fmt.Println("Service is healthy!")
+			slog.Info("Service is healthy!")
 			return nil
 		}
 
 		// Print an error message (optional)
-		fmt.Printf("Attempt %d: Service is not healthy yet. Retrying in %s...\n", i+1, retryInterval)
+		slog.Info(fmt.Sprintf("Attempt %d: Service is not healthy yet. Retrying in %s...\n", i+1, retryInterval))
 
 		// Wait for the specified interval before retrying
 		time.Sleep(retryInterval)
@@ -183,10 +181,7 @@ func (suite *ExampleTestSuite) TearDownSuite() {
 		log.Fatalf("Could not purge resource: %s", err)
 	}
 
-	// disconnect mongodb client
-	// if err := db.Disconnect(context.TODO()); err != nil {
-	// 	panic(err)
-	// }
+	// os.Exit(code)
 }
 
 type Credentials struct {
@@ -266,8 +261,6 @@ func (s *ExampleTestSuite) TestGetByDate() {
 	byteBody, err := io.ReadAll(response.Body)
 	s.NoError(err)
 
-	// s.Equal(`{"id":"1","title":"Hello 1","desc":"Article Description 1","content":"Article Content 1"}`, strings.Trim(string(byteBody), "\n"))
-	// s.Equal(`[]`, strings.Trim(string(byteBody), "\n"))
 	require.JSONEq(s.T(), `[
 		{
 		  "id": 1,
@@ -305,8 +298,6 @@ func (s *ExampleTestSuite) TestGetByID() {
 
 	byteBody, err := io.ReadAll(response.Body)
 	s.NoError(err)
-
-	// s.Equal(`{"id":"1","title":"Hello 1","desc":"Article Description 1","content":"Article Content 1"}`, strings.Trim(string(byteBody), "\n"))
 
 	require.JSONEq(s.T(), `[
 		{
