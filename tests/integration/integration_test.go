@@ -1,14 +1,11 @@
 package integration
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
@@ -29,7 +26,6 @@ var db *sql.DB
 
 type ExampleTestSuite struct {
 	suite.Suite
-	VariableThatShouldStartAtFive int
 	dockertest.Pool
 	*dockertest.Resource
 }
@@ -40,20 +36,17 @@ func (suite *ExampleTestSuite) SetupSuite() {
 		suite.T().Skip("Skip test for mongodb repository")
 	}
 
-	dataSource := persistence.Datasource{
-		Host:     "localhost",
-		Port:     5432,
+	dataSource := setupDatabase(suite)
+	startServer(dataSource)
+}
+
+func setupDatabase(suite *ExampleTestSuite) persistence.Datasource {
+
+	datasource := persistence.Datasource{
 		User:     "test_user",
 		Password: "test_password",
 		Name:     "test_db",
 	}
-
-	dataSource = setupDatabase(suite, dataSource)
-	startHttpServer(dataSource)
-}
-
-func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) persistence.Datasource {
-	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 
 	slog.Info("starting docker")
 
@@ -114,14 +107,7 @@ func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) p
 
 	slog.Info("Database for integration tests is up and running!")
 
-	query, err := os.ReadFile("../../init.sql")
-	log.Printf("Load file: " + string(query))
-	if err != nil {
-		panic(err)
-	}
-	if _, err := db.Exec(string(query)); err != nil {
-		panic(err)
-	}
+	loadTestData()
 
 	//Run tests
 	// code := m.Run()
@@ -139,7 +125,18 @@ func setupDatabase(suite *ExampleTestSuite, datasource persistence.Datasource) p
 	return datasource
 }
 
-func startHttpServer(dataSource persistence.Datasource) {
+func loadTestData() {
+	query, err := os.ReadFile("../../init.sql")
+	log.Printf("Load file: " + string(query))
+	if err != nil {
+		panic(err)
+	}
+	if _, err := db.Exec(string(query)); err != nil {
+		panic(err)
+	}
+}
+
+func startServer(dataSource persistence.Datasource) {
 	serverReady := make(chan bool)
 
 	server := app.Server{
@@ -148,10 +145,10 @@ func startHttpServer(dataSource persistence.Datasource) {
 	}
 
 	go server.Start()
-	waitForService("http://localhost:3333", 20, 100*time.Millisecond)
+	waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond)
 }
 
-func waitForService(url string, maxRetries int, retryInterval time.Duration) error {
+func waitServiceStart(url string, maxRetries int, retryInterval time.Duration) error {
 	for i := 0; i < maxRetries; i++ {
 		// Make a GET request to the /api/health endpoint
 		response, err := http.Get(url + "/api/health")
@@ -180,60 +177,6 @@ func (suite *ExampleTestSuite) TearDownSuite() {
 	if err := suite.Pool.Purge(suite.Resource); err != nil {
 		log.Fatalf("Could not purge resource: %s", err)
 	}
-
-	// os.Exit(code)
-}
-
-type Credentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type TokenResponse struct {
-	Token string `json:"token"`
-}
-
-func login() (string, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// Add fields to the form
-	_ = writer.WriteField("username", "jon")
-	_ = writer.WriteField("password", "shhh!")
-
-	err := writer.Close()
-	if err != nil {
-		return "", err
-	}
-
-	req, err := http.NewRequest("POST", "http://localhost:3333/login", body)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		var tokenResponse TokenResponse
-		err := json.Unmarshal(responseBody, &tokenResponse)
-		if err != nil {
-			return "", err
-		}
-		return tokenResponse.Token, nil
-	}
-
-	return "", fmt.Errorf("Login failed. Status code: %d, Response: %s", resp.StatusCode, string(responseBody))
 }
 
 func (s *ExampleTestSuite) TestGetByDate() {
