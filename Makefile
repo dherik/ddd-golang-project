@@ -6,7 +6,12 @@ GOTEST := $(GOCMD) test
 BINARY_NAME := main
 MAIN_FILE := main.go
 
-# Define targets and their commands
+dependency:
+	go get -v ./...
+
+integration-test: dependency
+	go test -coverpkg=./... -coverprofile=coverage.out -v ./...
+
 build:
 	$(GOBUILD) -o $(BINARY_NAME) $(MAIN_FILE)
 

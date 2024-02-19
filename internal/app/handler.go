@@ -117,6 +117,10 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 
 	e.POST("/login", login)
 
+	e.GET("/api/health", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Ok")
+	})
+
 }
 
 func login(c echo.Context) error {

@@ -10,12 +10,19 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type DatabaseConnection struct {
+type Datasource struct {
 	Host     string
 	Port     int
 	User     string
 	Password string
 	Name     string
+}
+
+func (ds *Datasource) ConnectionString() string {
+	conn := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		ds.Host, ds.Port, ds.User, ds.Password, ds.Name)
+	return conn
 }
 
 type TaskRepository interface {
@@ -25,15 +32,11 @@ type TaskRepository interface {
 }
 
 type PostgreRepository struct {
-	DB DatabaseConnection
+	DB Datasource
 }
 
 func (pg *PostgreRepository) connect() (*sql.DB, error) {
-	ds := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		pg.DB.Host, pg.DB.Port, pg.DB.User, pg.DB.Password, pg.DB.Name)
-
-	db, err := sql.Open("postgres", ds)
+	db, err := sql.Open("postgres", pg.DB.ConnectionString())
 	if err != nil {
 		return nil, fmt.Errorf("failed connecting to database: %w", err)
 	}
@@ -114,7 +117,7 @@ func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domai
 	return task, nil
 }
 
-func NewRepository(db DatabaseConnection) TaskRepository {
+func NewRepository(db Datasource) TaskRepository {
 	return &PostgreRepository{DB: db}
 }
 
@@ -128,12 +131,16 @@ func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
 
 	db, err := pg.connect()
 	if err != nil {
-		return []domain.Task{}, err
+		return []domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
 	}
 	defer db.Close()
 
-	rows, _ := db.Query(`SELECT id, user_id, description, created_at FROM task 
+	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task 
 		where user_id = $1`, userId)
+
+	if err != nil {
+		return []domain.Task{}, fmt.Errorf("failed reading rows: %w", err)
+	}
 
 	tasks := []domain.Task{}
 	for rows.Next() {
