@@ -23,4 +23,5 @@ services:
     ports:
       - "5432:5432"  # Map the PostgreSQL port to a host port (optional)
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init_ddl.sql:/docker-entrypoint-initdb.d/init_ddl.sql
+      - ./init_dml.sql:/docker-entrypoint-initdb.d/init_dml.sql

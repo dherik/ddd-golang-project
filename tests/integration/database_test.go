@@ -85,7 +85,9 @@ func setupDatabase(suite *ExampleTestSuite) persistence.Datasource {
 
 	slog.Info("Database for integration tests is up and running!")
 
-	loadTestData()
+	LoadDDL()
+
+	// LoadDatabase()
 
 	//Run tests
 	// code := m.Run()
@@ -103,13 +105,70 @@ func setupDatabase(suite *ExampleTestSuite) persistence.Datasource {
 	return datasource
 }
 
-func loadTestData() {
-	query, err := os.ReadFile("../../init.sql")
-	log.Printf("Load file: " + string(query))
+func LoadDDL() {
+	query, err := os.ReadFile("../../init_ddl.sql")
+	log.Printf("Load DDL file: " + string(query))
 	if err != nil {
 		panic(err)
 	}
 	if _, err := db.Exec(string(query)); err != nil {
 		panic(err)
+	}
+}
+
+func LoadDML() {
+	query, err := os.ReadFile("../../init_dml.sql")
+	log.Printf("Load DML file: " + string(query))
+	if err != nil {
+		panic(err)
+	}
+	if _, err := db.Exec(string(query)); err != nil {
+		panic(err)
+	}
+}
+
+func ResetData() {
+
+	// Retrieve a list of all tables in the database
+	rows, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")
+	if err != nil {
+		// t.Fatalf("Error querying tables: %v", err)
+		panic(err)
+	}
+	defer rows.Close()
+
+	// Build a comma-separated list of table names
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			// t.Fatalf("Error scanning table name: %v", err)
+			panic(err)
+
+		}
+		tables = append(tables, tableName)
+	}
+
+	// Check for errors from iterating over rows
+	if err := rows.Err(); err != nil {
+		// t.Fatalf("Error iterating over table names: %v", err)
+		panic(err)
+	}
+
+	// If there are tables, truncate them
+	if len(tables) > 0 {
+		// Build the SQL query to truncate tables
+		query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY CASCADE", strings.Join(tables, ", "))
+
+		// Execute the dynamic SQL query to truncate tables
+		_, err := db.Exec(query)
+		if err != nil {
+			// t.Fatalf("Error resetting database: %v", err)
+			panic(err)
+		}
+
+		fmt.Println("Database reset successful")
+	} else {
+		fmt.Println("No tables found in the database")
 	}
 }

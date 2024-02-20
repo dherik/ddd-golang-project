@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/domain"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
@@ -31,6 +34,12 @@ func (suite *ExampleTestSuite) SetupSuite() {
 	startServer(dataSource)
 }
 
+func (suite *ExampleTestSuite) SetupTest() {
+	log.Println("##### reset database setup test")
+	ResetData()
+	LoadDML()
+}
+
 func (suite *ExampleTestSuite) TearDownSuite() {
 	// Teardown
 	log.Println("Tear down container")
@@ -48,8 +57,11 @@ func (s *ExampleTestSuite) TestGetByDate() {
 
 	token, _ := login()
 
-	startDate := time.Now().AddDate(0, 0, -5).UTC().Format(time.RFC3339)
-	endDate := time.Now().AddDate(0, 0, 5).UTC().Format(time.RFC3339)
+	// startDate := time.Now().AddDate(0, 0, -10).UTC().Format(time.RFC3339)
+	// endDate := time.Now().AddDate(0, 0, 10).UTC().Format(time.RFC3339)
+
+	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
+	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 
 	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
 	slog.Info(fmt.Sprintf("Url: %s", url))
@@ -113,6 +125,38 @@ func (s *ExampleTestSuite) TestGetByID() {
 		}
 	  ]`, string(byteBody))
 	response.Body.Close()
+}
+
+func (s *ExampleTestSuite) TestAddTask() {
+	if testing.Short() {
+		s.T().Skip("Skip test for postgresql repository")
+	}
+
+	token, _ := login()
+
+	payload := domain.Task{
+		UserId:      "1",
+		Description: "Hello, World!",
+	}
+
+	// Convert payload to JSON
+	requestBody, err := json.Marshal(payload)
+	if err != nil {
+		s.T().Fatalf("Error encoding JSON: %v", err)
+	}
+
+	url := fmt.Sprintf("http://localhost:%d/tasks", 3333)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody)) //TODO duplicated port, get from s.port (parametrized)
+	s.NoError(err)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.Client{}
+	response, err := client.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusCreated, response.StatusCode)
+
 }
 
 // In order for 'go test' to run this suite, we need to create
