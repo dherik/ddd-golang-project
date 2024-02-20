@@ -1,7 +1,6 @@
-package app
+package api
 
 import (
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -31,7 +30,19 @@ type jwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func SetupHandler(e *echo.Echo, service *TaskService) {
+type Routes struct {
+	TaskHandler  TaskHandler
+	LoginHandler LoginHandler
+}
+
+func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler) Routes {
+	return Routes{
+		TaskHandler:  taskHandler,
+		LoginHandler: loginHandler,
+	}
+}
+
+func (r *Routes) SetupRoutes(e *echo.Echo) {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -44,82 +55,16 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 
 	taskGroup := e.Group("/tasks")
 	taskGroup.Use(echojwt.WithConfig(config))
+	taskGroup.GET("", r.TaskHandler.getTasks)
+	taskGroup.GET("/:id", r.TaskHandler.getTaskByID)
+	taskGroup.POST("", r.TaskHandler.createTask)
 
-	taskGroup.GET("", func(c echo.Context) error {
-		startDateParam := c.QueryParam("startDate")
-		endDateParam := c.QueryParam("endDate")
-		startDate, err := time.Parse(time.RFC3339, startDateParam)
-		if err != nil {
-			return err //FIXME
-		}
-		endDate, err := time.Parse(time.RFC3339, endDateParam)
-		if err != nil {
-			return err //FIXME
-		}
-		tasks, err := service.FindTasks(startDate, endDate)
-		if err != nil {
-			return err //FIXME
-		}
-		return c.JSONPretty(http.StatusOK, tasks, "")
-	})
-
-	taskGroup.GET("/:id", func(c echo.Context) error {
-		slog.Info("Get all tasks from user")
-		tasks := service.GetTasks(c.Param("id")) //FIXME
-		return c.JSONPretty(http.StatusOK, tasks, " ")
-	})
-
-	taskGroup.POST("", func(c echo.Context) error {
-		slog.Info("Add new task for user")
-		t := TaskRequest{}
-		if err := c.Bind(&t); err != nil {
-			slog.Error("Error reading task body", slog.String("error", err.Error()))
-			return err //FIXME
-		}
-
-		service.AddTaskToUser(t)
-
-		return c.String(http.StatusCreated, "")
-	})
-
-	e.POST("/login", login)
+	e.POST("/login", r.LoginHandler.login)
 
 	e.GET("/api/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Ok")
 	})
 
-}
-
-func login(c echo.Context) error {
-	username := c.FormValue("username")
-	password := c.FormValue("password")
-
-	// Throws unauthorized error
-	if username != "jon" || password != "shhh!" {
-		return echo.ErrUnauthorized
-	}
-
-	// Set custom claims
-	claims := &jwtCustomClaims{
-		"Jon Snow",
-		true,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
-		},
-	}
-
-	// Create token with claims
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Generate encoded token and send it as response.
-	t, err := token.SignedString([]byte("secret"))
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"token": t,
-	})
 }
 
 // var jwtKey = []byte("my_secret_key")

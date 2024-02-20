@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -19,13 +20,16 @@ func (s *Server) Start() {
 
 	taskRepository := persistence.NewRepository(s.Datasource)
 	// taskRepository := persistence.NewMemoryRepository()
-	service := NewTaskService(taskRepository)
+	taskService := api.NewTaskService(taskRepository)
+	taskHandler := api.NewTaskHandler(*taskService)
+	loginHandler := api.NewLoginHandler()
+	routes := api.NewRouter(taskHandler, loginHandler)
 
-	e := echo.New()
-	setupSlog(e)
+	echo := echo.New()
+	setupSlog(echo)
 
-	SetupHandler(e, service)
-	e.Logger.Fatal(e.Start(":3333"))
+	routes.SetupRoutes(echo)
+	echo.Logger.Fatal(echo.Start(":3333"))
 }
 
 func setupSlog(e *echo.Echo) {
