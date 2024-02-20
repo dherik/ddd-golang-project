@@ -102,6 +102,37 @@ func (s *TaskTestSuite) TestGetByDate() {
 	response.Body.Close()
 }
 
+// func (s *TaskTestSuite) TestGetByID() {
+// 	if testing.Short() {
+// 		s.T().Skip("Skip test for postgresql repository")
+// 	}
+
+// 	token, _ := login()
+
+// 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/tasks/%d", 3333, 1), nil) //TODO duplicated port, get from s.port (parametrized)
+// 	s.NoError(err)
+
+// 	req.Header.Set("Authorization", "Bearer "+token)
+
+// 	client := http.Client{}
+// 	response, err := client.Do(req)
+// 	s.NoError(err)
+// 	s.Equal(http.StatusOK, response.StatusCode)
+
+// 	byteBody, err := io.ReadAll(response.Body)
+// 	s.NoError(err)
+
+// 	require.JSONEq(s.T(), `[
+// 		{
+// 		  "id": 1,
+// 		  "description": "Complete project proposal",
+// 		  "userId": "1",
+// 		  "createdAt": "2024-02-15T10:59:01.054Z"
+// 		}
+// 	  ]`, string(byteBody))
+// 	response.Body.Close()
+// }
+
 func (s *TaskTestSuite) TestGetByID() {
 	if testing.Short() {
 		s.T().Skip("Skip test for postgresql repository")
@@ -122,14 +153,12 @@ func (s *TaskTestSuite) TestGetByID() {
 	byteBody, err := io.ReadAll(response.Body)
 	s.NoError(err)
 
-	require.JSONEq(s.T(), `[
-		{
+	require.JSONEq(s.T(), `{
 		  "id": 1,
 		  "description": "Complete project proposal",
 		  "userId": "1",
 		  "createdAt": "2024-02-15T10:59:01.054Z"
-		}
-	  ]`, string(byteBody))
+		}`, string(byteBody))
 	response.Body.Close()
 }
 

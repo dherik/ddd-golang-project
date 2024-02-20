@@ -27,28 +27,26 @@ func (s *TaskService) FindTasks(startDate time.Time, endDate time.Time) ([]TaskR
 	if err != nil {
 		return []TaskResponse{}, fmt.Errorf("failed finding tasks: %w", err)
 	}
-	taskResponses := toResponse(tasks)
+	taskResponses := toResponseArray(tasks)
 	return taskResponses, nil
 }
 
-func (s *TaskService) GetTasks(userId string) []TaskResponse {
-	var tasks []domain.Task
-	tasks, _ = s.taskRepository.GetByUserID(userId)
-	slog.Info(fmt.Sprintf("Found %d tasks for user with id %s", len(tasks), userId))
-	taskResponses := toResponse(tasks)
-	return taskResponses
+func (s *TaskService) GetTasksByID(id int) TaskResponse {
+	task, _ := s.taskRepository.GetByID(id) //FIXME error
+	slog.Info(fmt.Sprintf("Found task with id %d", id))
+	return toResponse(task)
 }
 
-func toResponse(tasks []domain.Task) []TaskResponse {
+func toResponseArray(tasks []domain.Task) []TaskResponse {
 	taskResponses := []TaskResponse{}
 	for _, task := range tasks {
-		tr := copyResponse(task)
+		tr := toResponse(task)
 		taskResponses = append(taskResponses, tr)
 	}
 	return taskResponses
 }
 
-func copyResponse(task domain.Task) TaskResponse {
+func toResponse(task domain.Task) TaskResponse {
 	tr := TaskResponse{
 		Id:          task.Id,
 		UserId:      task.UserId,

@@ -3,6 +3,7 @@ package api
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -38,8 +39,9 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 
 func (h *TaskHandler) getTaskByID(c echo.Context) error {
 	slog.Info("Get all tasks from user")
-	tasks := h.TaskService.GetTasks(c.Param("id")) //FIXME
-	return c.JSONPretty(http.StatusOK, tasks, " ")
+	id, _ := strconv.Atoi(c.Param("id"))   //FIXME
+	task := h.TaskService.GetTasksByID(id) //FIXME
+	return c.JSONPretty(http.StatusOK, task, " ")
 }
 
 func (h *TaskHandler) createTask(c echo.Context) error {
