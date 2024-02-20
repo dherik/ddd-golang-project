@@ -167,5 +167,6 @@ func (s *TaskTestSuite) TestAddTask() {
 	s.NoError(err)
 
 	s.Equal("", string(byteBody))
+	response.Body.Close()
 
 }

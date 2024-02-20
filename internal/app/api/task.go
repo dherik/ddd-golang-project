@@ -52,5 +52,5 @@ func (h *TaskHandler) createTask(c echo.Context) error {
 
 	h.TaskService.AddTaskToUser(t)
 
-	return c.String(http.StatusCreated, "")
+	return c.NoContent(http.StatusCreated)
 }
