@@ -163,4 +163,9 @@ func (s *TaskTestSuite) TestAddTask() {
 	s.NoError(err)
 	s.Equal(http.StatusCreated, response.StatusCode)
 
+	byteBody, err := io.ReadAll(response.Body)
+	s.NoError(err)
+
+	s.Equal("", string(byteBody))
+
 }

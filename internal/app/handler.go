@@ -47,10 +47,6 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 	log.Info(config)
 	taskGroup.Use(echojwt.WithConfig(config))
 
-	// e.GET("/", func(c echo.Context) error {
-	// 	return c.String(http.StatusOK, "Hello, World!")
-	// })
-
 	taskGroup.GET("", func(c echo.Context) error {
 		startDateParam := c.QueryParam("startDate")
 		endDateParam := c.QueryParam("endDate")
@@ -85,44 +81,8 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 
 		service.AddTaskToUser(t)
 
-		return c.JSONPretty(http.StatusCreated, nil, "")
+		return c.String(http.StatusCreated, "")
 	})
-
-	// e.POST("/signin", func(c echo.Context) error {
-	// 	creds := Credentials{}
-	// 	if err := c.Bind(&creds); err != nil {
-	// 		slog.Error("Error reading body", slog.String("error", err.Error()))
-	// 		return echo.ErrBadRequest
-	// 	}
-
-	// 	expectedPassword, ok := users[creds.Username]
-
-	// 	if !ok || expectedPassword != creds.Password {
-	// 		slog.Error("Password invalid")
-	// 		return echo.ErrUnauthorized
-	// 	}
-
-	// 	expirationTime := time.Now().Add(1 * time.Hour)
-	// 	claims := &Claims{
-	// 		Username: creds.Username,
-	// 		RegisteredClaims: jwt.RegisteredClaims{
-	// 			ExpiresAt: jwt.NewNumericDate(expirationTime),
-	// 		},
-	// 	}
-
-	// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// 	tokenString, err := token.SignedString(jwtKey)
-	// 	if err != nil {
-	// 		return echo.ErrInternalServerError
-	// 	}
-
-	// 	signInResponse := SignInResponse{
-	// 		Token:     tokenString,
-	// 		ExpiresAt: expirationTime,
-	// 		Username:  creds.Username,
-	// 	}
-	// 	return c.JSONPretty(http.StatusOK, signInResponse, "")
-	// })
 
 	e.POST("/login", login)
 
