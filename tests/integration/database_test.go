@@ -107,7 +107,7 @@ func setupDatabase(suite *TaskTestSuite) persistence.Datasource {
 
 func LoadDDL() {
 	query, err := os.ReadFile("../../init_ddl.sql")
-	log.Printf("Load DDL file: " + string(query))
+	slog.Debug("Load DDL file: " + string(query))
 	if err != nil {
 		panic(err)
 	}
@@ -118,7 +118,7 @@ func LoadDDL() {
 
 func LoadDML() {
 	query, err := os.ReadFile("../../init_dml.sql")
-	log.Printf("Load DML file: " + string(query))
+	slog.Debug("Load DML file: " + string(query))
 	if err != nil {
 		panic(err)
 	}
