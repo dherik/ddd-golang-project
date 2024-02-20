@@ -9,7 +9,6 @@ import (
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/labstack/gommon/log"
 )
 
 type TaskResponse struct {
@@ -44,7 +43,6 @@ func SetupHandler(e *echo.Echo, service *TaskService) {
 	}
 
 	taskGroup := e.Group("/tasks")
-	log.Info(config)
 	taskGroup.Use(echojwt.WithConfig(config))
 
 	taskGroup.GET("", func(c echo.Context) error {
