@@ -18,7 +18,7 @@ import (
 
 var db *sql.DB
 
-func setupDatabase(suite *ExampleTestSuite) persistence.Datasource {
+func setupDatabase(suite *TaskTestSuite) persistence.Datasource {
 
 	datasource := persistence.Datasource{
 		User:     "test_user",
@@ -167,8 +167,8 @@ func ResetData() {
 			panic(err)
 		}
 
-		fmt.Println("Database reset successful")
+		slog.Info("Database reset successful")
 	} else {
-		fmt.Println("No tables found in the database")
+		slog.Info("No tables found in the database")
 	}
 }

@@ -18,13 +18,13 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type ExampleTestSuite struct {
+type TaskTestSuite struct {
 	suite.Suite
 	dockertest.Pool
 	*dockertest.Resource
 }
 
-func (suite *ExampleTestSuite) SetupSuite() {
+func (suite *TaskTestSuite) SetupSuite() {
 
 	if testing.Short() {
 		suite.T().Skip("Skip test for mongodb repository")
@@ -34,13 +34,19 @@ func (suite *ExampleTestSuite) SetupSuite() {
 	startServer(dataSource)
 }
 
-func (suite *ExampleTestSuite) SetupTest() {
+// In order for 'go test' to run this suite, we need to create
+// a normal test function and pass our suite to suite.Run
+func TestExampleTestSuite(t *testing.T) {
+	suite.Run(t, new(TaskTestSuite))
+}
+
+func (suite *TaskTestSuite) SetupTest() {
 	log.Println("##### reset database setup test")
 	ResetData()
 	LoadDML()
 }
 
-func (suite *ExampleTestSuite) TearDownSuite() {
+func (suite *TaskTestSuite) TearDownSuite() {
 	// Teardown
 	log.Println("Tear down container")
 
@@ -50,7 +56,7 @@ func (suite *ExampleTestSuite) TearDownSuite() {
 	}
 }
 
-func (s *ExampleTestSuite) TestGetByDate() {
+func (s *TaskTestSuite) TestGetByDate() {
 	if testing.Short() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
@@ -96,7 +102,7 @@ func (s *ExampleTestSuite) TestGetByDate() {
 	response.Body.Close()
 }
 
-func (s *ExampleTestSuite) TestGetByID() {
+func (s *TaskTestSuite) TestGetByID() {
 	if testing.Short() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
@@ -127,7 +133,7 @@ func (s *ExampleTestSuite) TestGetByID() {
 	response.Body.Close()
 }
 
-func (s *ExampleTestSuite) TestAddTask() {
+func (s *TaskTestSuite) TestAddTask() {
 	if testing.Short() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
@@ -157,10 +163,4 @@ func (s *ExampleTestSuite) TestAddTask() {
 	s.NoError(err)
 	s.Equal(http.StatusCreated, response.StatusCode)
 
-}
-
-// In order for 'go test' to run this suite, we need to create
-// a normal test function and pass our suite to suite.Run
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(ExampleTestSuite))
 }
