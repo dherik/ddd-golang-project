@@ -25,12 +25,6 @@ func (ds *Datasource) ConnectionString() string {
 	return conn
 }
 
-type TaskRepository interface {
-	Get(userId string) ([]domain.Task, error)
-	AddTaskToUser(userId string, task domain.Task) (domain.Task, error)
-	FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error)
-}
-
 type PostgreRepository struct {
 	DB Datasource
 }
@@ -121,11 +115,11 @@ func (m *MemoryRepository) AddTaskToUser(userId string, task domain.Task) (domai
 	return task, nil
 }
 
-func NewRepository(db Datasource) TaskRepository {
+func NewRepository(db Datasource) domain.TaskRepository {
 	return &PostgreRepository{DB: db}
 }
 
-func NewMemoryRepository() TaskRepository {
+func NewMemoryRepository() domain.TaskRepository {
 	return &MemoryRepository{
 		tasks: make(map[string][]domain.Task),
 	}
