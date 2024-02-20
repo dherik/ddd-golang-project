@@ -18,7 +18,7 @@ type Server struct {
 
 func (s *Server) Start() {
 
-	taskRepository := persistence.NewRepository(s.Datasource)
+	taskRepository := persistence.NewTaskRepository(s.Datasource)
 	// taskRepository := persistence.NewMemoryRepository()
 	taskService := api.NewTaskService(taskRepository)
 	taskHandler := api.NewTaskHandler(*taskService)
