@@ -56,12 +56,14 @@ func (pg *PostgreRepository) AddTaskToUser(userId string, task domain.Task) (dom
 		return domain.Task{}, fmt.Errorf("failed to insert task to database: %w", err)
 	}
 
-	task.Id = id // FIXME find task again using id
-	return task, nil
+	return pg.GetByID(id)
+
+	// task.Id = id // FIXME find task again using id
+	// return task, nil
 
 }
 
-func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
+func (pg *PostgreRepository) GetByUserID(userId string) ([]domain.Task, error) {
 
 	db, err := pg.connect()
 	if err != nil {
@@ -87,4 +89,35 @@ func (pg *PostgreRepository) Get(userId string) ([]domain.Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func (pg *PostgreRepository) GetByID(id int) (domain.Task, error) {
+
+	db, err := pg.connect()
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
+	}
+	defer db.Close()
+
+	var task domain.Task
+	err = db.QueryRow(`SELECT id, user_id, description, created_at FROM task 
+		where id = $1`, id).Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
+
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("failed reading rows: %w", err)
+	}
+
+	return task, nil
+
+	// tasks := []domain.Task{}
+	// for rows.Next() {
+	// 	var task domain.Task
+	// 	err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
+	// 	if err != nil {
+	// 		return []domain.Task{}, fmt.Errorf("failed scanning row: %w", err)
+	// 	}
+	// 	tasks = append(tasks, task)
+	// }
+
+	// return tasks, nil
 }

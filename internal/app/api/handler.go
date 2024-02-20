@@ -56,7 +56,7 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 	taskGroup := e.Group("/tasks")
 	taskGroup.Use(echojwt.WithConfig(config))
 	taskGroup.GET("", r.TaskHandler.getTasks)
-	taskGroup.GET("/:id", r.TaskHandler.getTaskByID)
+	taskGroup.GET("/:id", r.TaskHandler.getTaskByID) //FIXME using by user id
 	taskGroup.POST("", r.TaskHandler.createTask)
 
 	e.POST("/login", r.LoginHandler.login)

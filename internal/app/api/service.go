@@ -33,7 +33,7 @@ func (s *TaskService) FindTasks(startDate time.Time, endDate time.Time) ([]TaskR
 
 func (s *TaskService) GetTasks(userId string) []TaskResponse {
 	var tasks []domain.Task
-	tasks, _ = s.taskRepository.Get(userId)
+	tasks, _ = s.taskRepository.GetByUserID(userId)
 	slog.Info(fmt.Sprintf("Found %d tasks for user with id %s", len(tasks), userId))
 	taskResponses := toResponse(tasks)
 	return taskResponses
