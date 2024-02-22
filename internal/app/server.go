@@ -18,11 +18,14 @@ type Server struct {
 
 func (s *Server) Start() {
 
-	taskRepository := persistence.NewTaskRepository(s.Datasource)
+	pgsql := persistence.NewPostgreRepository(s.Datasource)
+	taskRepository := persistence.NewTaskRepository(pgsql)
+	userRepository := persistence.NewUserRepository(pgsql)
 	// taskRepository := persistence.NewMemoryRepository()
 	taskService := api.NewTaskService(taskRepository)
+	userService := api.NewUserService(userRepository)
 	taskHandler := api.NewTaskHandler(*taskService)
-	loginHandler := api.NewLoginHandler()
+	loginHandler := api.NewLoginHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler)
 
 	echo := echo.New()

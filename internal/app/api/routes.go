@@ -26,7 +26,8 @@ type TaskRequest struct {
 // See https://github.com/golang-jwt/jwt for more examples
 type jwtCustomClaims struct {
 	Name  string `json:"name"`
-	Admin bool   `json:"admin"`
+	Email string `json:"email"`
+	// Admin bool   `json:"admin"`
 	jwt.RegisteredClaims
 }
 

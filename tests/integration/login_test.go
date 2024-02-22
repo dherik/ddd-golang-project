@@ -23,8 +23,8 @@ func login() (string, error) {
 	writer := multipart.NewWriter(body)
 
 	// Add fields to the form
-	_ = writer.WriteField("username", "jon")
-	_ = writer.WriteField("password", "shhh!")
+	_ = writer.WriteField("username", "admin")
+	_ = writer.WriteField("password", "some_password")
 
 	err := writer.Close()
 	if err != nil {

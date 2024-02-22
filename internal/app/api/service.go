@@ -17,7 +17,7 @@ func NewTaskService(taskRepository domain.TaskRepository) *TaskService {
 }
 
 func (s *TaskService) AddTaskToUser(taskRequest TaskRequest) {
-	t := copyRequest(&taskRequest)
+	t := toRequest(&taskRequest)
 	s.taskRepository.AddTaskToUser(t.UserId, t)
 }
 
@@ -56,6 +56,25 @@ func toResponse(task domain.Task) TaskResponse {
 	return tr
 }
 
-func copyRequest(taskRequest *TaskRequest) domain.Task {
+func toRequest(taskRequest *TaskRequest) domain.Task {
 	return domain.NewTask(taskRequest.UserId, taskRequest.Description)
+}
+
+type UserService struct {
+	userRepository domain.UserRepository
+}
+
+func NewUserService(userRepository domain.UserRepository) UserService {
+	return UserService{
+		userRepository: userRepository,
+	}
+}
+
+func (s *UserService) login(username, password string) (bool, error) {
+	user, err := s.userRepository.FindUserByUsername(username)
+	if err != nil {
+		return false, err
+	}
+	authorized := user.CheckPasswordHash(password)
+	return authorized, nil
 }

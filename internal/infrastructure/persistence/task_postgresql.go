@@ -7,13 +7,17 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
-func NewTaskRepository(db Datasource) domain.TaskRepository {
-	return &PostgreRepository{DB: db}
+type TaskSqlRepository struct {
+	pgsql PostgreRepository
 }
 
-func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+func NewTaskRepository(pgsql PostgreRepository) domain.TaskRepository {
+	return &TaskSqlRepository{pgsql: pgsql}
+}
 
-	db, err := pg.connect()
+func (r *TaskSqlRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+
+	db, err := r.pgsql.connect()
 	if err != nil {
 		return []domain.Task{}, err
 	}
@@ -40,9 +44,9 @@ func (pg *PostgreRepository) FindTasks(startDate time.Time, endDate time.Time) (
 	return tasks, nil
 }
 
-func (pg *PostgreRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
 
-	db, err := pg.connect()
+	db, err := r.pgsql.connect()
 	if err != nil {
 		return domain.Task{}, err
 	}
@@ -56,16 +60,16 @@ func (pg *PostgreRepository) AddTaskToUser(userId string, task domain.Task) (dom
 		return domain.Task{}, fmt.Errorf("failed to insert task to database: %w", err)
 	}
 
-	return pg.GetByID(id)
+	return r.GetByID(id)
 
 	// task.Id = id // FIXME find task again using id
 	// return task, nil
 
 }
 
-func (pg *PostgreRepository) GetByUserID(userId string) ([]domain.Task, error) {
+func (r *TaskSqlRepository) GetByUserID(userId string) ([]domain.Task, error) {
 
-	db, err := pg.connect()
+	db, err := r.pgsql.connect()
 	if err != nil {
 		return []domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
 	}
@@ -91,9 +95,9 @@ func (pg *PostgreRepository) GetByUserID(userId string) ([]domain.Task, error) {
 	return tasks, nil
 }
 
-func (pg *PostgreRepository) GetByID(id int) (domain.Task, error) {
+func (r *TaskSqlRepository) GetByID(id int) (domain.Task, error) {
 
-	db, err := pg.connect()
+	db, err := r.pgsql.connect()
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("failed connecting to database: %w", err)
 	}

@@ -23,11 +23,17 @@ func (ds *Datasource) ConnectionString() string {
 }
 
 type PostgreRepository struct {
-	DB Datasource
+	DataSource Datasource
+}
+
+func NewPostgreRepository(ds Datasource) PostgreRepository {
+	return PostgreRepository{
+		DataSource: ds,
+	}
 }
 
 func (pg *PostgreRepository) connect() (*sql.DB, error) {
-	db, err := sql.Open("postgres", pg.DB.ConnectionString())
+	db, err := sql.Open("postgres", pg.DataSource.ConnectionString())
 	if err != nil {
 		return nil, fmt.Errorf("failed connecting to database: %w", err)
 	}

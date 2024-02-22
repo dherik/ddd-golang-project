@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,10 +10,13 @@ import (
 )
 
 type LoginHandler struct {
+	UserService UserService
 }
 
-func NewLoginHandler() LoginHandler {
-	return LoginHandler{}
+func NewLoginHandler(userService UserService) LoginHandler {
+	return LoginHandler{
+		UserService: userService,
+	}
 }
 
 func (h *LoginHandler) login(c echo.Context) error {
@@ -20,16 +24,25 @@ func (h *LoginHandler) login(c echo.Context) error {
 	password := c.FormValue("password")
 
 	// Throws unauthorized error
-	if username != "jon" || password != "shhh!" {
+	// if username != "jon" || password != "shhh!" {
+	// 	return echo.ErrUnauthorized
+	// }
+
+	authorized, err := h.UserService.login(username, password)
+	if err != nil {
+		return fmt.Errorf("failed login for user %s: %w", username, err) //FIXME
+	}
+	if !authorized {
 		return echo.ErrUnauthorized
 	}
 
 	// Set custom claims
+	expirationTime := time.Now().Add(time.Hour * 72)
 	claims := &jwtCustomClaims{
-		"Jon Snow",
-		true,
+		"Jon Snow",        //FIXME
+		"email@email.com", //FIXME
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
 	}
 
@@ -37,12 +50,21 @@ func (h *LoginHandler) login(c echo.Context) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Generate encoded token and send it as response.
-	t, err := token.SignedString([]byte("secret"))
+	tokenString, err := token.SignedString([]byte("secret"))
 	if err != nil {
-		return err
+		return err //FIXME
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"token": t,
-	})
+	loginResponse := LoginResponse{
+		Token:     tokenString,
+		ExpiresAt: expirationTime,
+	}
+
+	return c.JSON(http.StatusOK, loginResponse)
+}
+
+type LoginResponse struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	UserID    int       `json:"userId"`
 }

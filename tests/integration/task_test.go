@@ -63,9 +63,6 @@ func (s *TaskTestSuite) TestGetByDate() {
 
 	token, _ := login()
 
-	// startDate := time.Now().AddDate(0, 0, -10).UTC().Format(time.RFC3339)
-	// endDate := time.Now().AddDate(0, 0, 10).UTC().Format(time.RFC3339)
-
 	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 
