@@ -61,7 +61,7 @@ func (s *TaskTestSuite) TestGetByDate() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, _ := login()
+	token, _ := login("admin", "some_password")
 
 	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
@@ -135,7 +135,7 @@ func (s *TaskTestSuite) TestGetByID() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, _ := login()
+	token, _ := login("admin", "some_password")
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/tasks/%d", 3333, 1), nil) //TODO duplicated port, get from s.port (parametrized)
 	s.NoError(err)
@@ -164,7 +164,7 @@ func (s *TaskTestSuite) TestAddTask() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, _ := login()
+	token, _ := login("admin", "some_password")
 
 	payload := domain.Task{
 		UserId:      "1",

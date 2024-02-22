@@ -18,13 +18,13 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
-func login() (string, error) {
+func login(username, password string) (string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
 	// Add fields to the form
-	_ = writer.WriteField("username", "admin")
-	_ = writer.WriteField("password", "some_password")
+	_ = writer.WriteField("username", username)
+	_ = writer.WriteField("password", password)
 
 	err := writer.Close()
 	if err != nil {
