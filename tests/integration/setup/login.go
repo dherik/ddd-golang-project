@@ -1,4 +1,4 @@
-package integration
+package setup
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
-func login(username, password string) (string, error) {
+func Login(username, password string) (string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 

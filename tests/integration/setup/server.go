@@ -1,4 +1,4 @@
-package integration
+package setup
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
-func startServer(dataSource persistence.Datasource) {
+func StartServer(dataSource persistence.Datasource) {
 	serverReady := make(chan bool)
 
 	server := app.Server{

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
+	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ import (
 
 type TaskTestSuite struct {
 	suite.Suite
-	dockertest.Pool
+	*dockertest.Pool
 	*dockertest.Resource
 }
 
@@ -30,8 +31,12 @@ func (suite *TaskTestSuite) SetupSuite() {
 		suite.T().Skip("Skip test for mongodb repository")
 	}
 
-	dataSource := setupDatabase(suite)
-	startServer(dataSource)
+	dataSource, pool, resource := setup.SetupDatabase()
+
+	suite.Pool = pool
+	suite.Resource = resource
+
+	setup.StartServer(dataSource)
 }
 
 // In order for 'go test' to run this suite, we need to create
@@ -42,8 +47,8 @@ func TestExecuteAllSuites(t *testing.T) {
 
 func (suite *TaskTestSuite) SetupTest() {
 	log.Println("##### reset database setup test")
-	ResetData()
-	LoadDML()
+	setup.ResetData()
+	setup.LoadDML()
 }
 
 func (suite *TaskTestSuite) TearDownSuite() {
@@ -61,7 +66,7 @@ func (s *TaskTestSuite) TestGetByDate() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, _ := login("admin", "some_password")
+	token, _ := setup.Login("admin", "some_password")
 
 	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
@@ -135,7 +140,7 @@ func (s *TaskTestSuite) TestGetByID() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, _ := login("admin", "some_password")
+	token, _ := setup.Login("admin", "some_password")
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/tasks/%d", 3333, 1), nil) //TODO duplicated port, get from s.port (parametrized)
 	s.NoError(err)
@@ -164,7 +169,7 @@ func (s *TaskTestSuite) TestAddTask() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, _ := login("admin", "some_password")
+	token, _ := setup.Login("admin", "some_password")
 
 	payload := domain.Task{
 		UserId:      "1",

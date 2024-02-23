@@ -1,4 +1,4 @@
-package integration
+package setup
 
 import (
 	"database/sql"
@@ -18,7 +18,7 @@ import (
 
 var db *sql.DB
 
-func setupDatabase(suite *TaskTestSuite) persistence.Datasource {
+func SetupDatabase() (persistence.Datasource, *dockertest.Pool, *dockertest.Resource) {
 
 	datasource := persistence.Datasource{
 		User:     "test_user",
@@ -87,22 +87,10 @@ func setupDatabase(suite *TaskTestSuite) persistence.Datasource {
 
 	LoadDDL()
 
-	// LoadDatabase()
+	// suite.Pool = *pool
+	// suite.Resource = resource
 
-	//Run tests
-	// code := m.Run()
-
-	// You can't defer this because os.Exit doesn't care for defer
-	// if err := pool.Purge(resource); err != nil {
-	// 	log.Fatalf("Could not purge resource: %s", err)
-	// }
-
-	// os.Exit(code)
-
-	suite.Pool = *pool
-	suite.Resource = resource
-
-	return datasource
+	return datasource, pool, resource
 }
 
 func LoadDDL() {
