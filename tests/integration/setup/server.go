@@ -40,5 +40,5 @@ func waitServiceStart(url string, maxRetries int, retryInterval time.Duration) e
 	}
 
 	// Return an error if the service does not become healthy within the specified retries
-	return fmt.Errorf("Service did not become healthy after %d attempts", maxRetries)
+	return fmt.Errorf("service did not become healthy after %d attempts", maxRetries)
 }

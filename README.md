@@ -1,8 +1,12 @@
-# ddd-golang-project
+# DDD Go Project
+
+## Introduction
+
+Welcome to DDD Go Project, a dynamic and innovative project built with Go programming language. This initiative is driven by a passion for DDD (Domain Driven Design), Go and test automation.
 
 ## How to run
 
-### Local
+### With Docker Compose
 
 Just run:
 
@@ -10,70 +14,105 @@ Just run:
 docker compose up
 ```
 
-To build:
+To build the application and down the containers:
 
 ```sh
 docker compose build
+docker compose down
 ```
 
-## All itens considered
+### Without Docker Compose
 
-With technical justification.
+Run the databaase:
 
-- docker-compose for development. Every single project should have it
-- README.md with all information to maintain and run. Description about what it does
-- Unit tests
-- Integration tests
-- Dockerfile with optimizations
-- Database with optimizations
-- REST with response headers
-- commit messages using https://www.conventionalcommits.org/en/v1.0.0/
-- Using slog
-- Using Makefile
-- launch.json for VSCode ready for debugging
-- Save dates as UTC (and local?)
-- Bruno endpoints
-- REST API documentation
+```sh
+docker compose up postgres
+```
+
+And run the application using the **Makefile**:
+
+```sh
+make build run
+```
+
+### How to run the tests
+
+To run the integration tests:
+
+```sh
+make integration-test
+```
+
+## All itens considered for the project
+
+Below is the extensive list of items I am considering in the project and that I classified as essential for a good Go project. The idea is that each project decision is well-founded. There are still many things to be adjusted, so consider that this project is always evolving.
+
+- Using Docker Compose to facilitate development.
+- README.md with all the necessary information to run the project.
+- Unit tests.
+- Integration tests using the testify and Docker Test libraries to control scenarios.
+- REST API endpoints following market standards (using plural nouns, avoiding verbs, employing hierarchy, adopting correct standards for representing dates, etc.).
+- Secure endpoints with authentication (JWT).
+- Using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/).
+- Use of structured logging (Go slog).
+- Use of Makefile
+- Versioned files with the collection of endpoints, ready to import on [Bruno](https://www.usebruno.com)
+- `launch.json` file for Visual Studio Code already configured for debugging the application
+- Short names for Go packages.
+- Use of dependency injection pattern.
+
+What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 
 ## Structure
 
 ```
-my-ddd-app/
-├── cmd/
-│   └── main.go                # Main application entry point
-├── internal/
-│   ├── app/
-│   │   ├── service.go         # Application service layer
-│   │   └── errors.go          # Custom application-specific errors
-│   ├── domain/
-│   │   ├── user.go            # User domain entity
-│   │   ├── task.go            # Task domain entity
-│   │   └── repository.go      # Repository interfaces
-│   ├── infrastructure/
-│   │   ├── persistence/
-│   │   │   ├── user_repository.go  # User repository implementation
-│   │   │   ├── task_repository.go  # Task repository implementation
-│   │   │   └── database.go         # Database connection setup
-│   │   ├── messaging/
-│   │   │   └── rabbitmq.go    # RabbitMQ integration
-│   │   └── external/
-│   │       └── weatherapi.go  # External weather API integration
-|   ├── api/                   # here or inside of the app/
-│   │   ├── handlers.go              
-|   │   └── routes.go                
-│   ├── config/
-│   │   └── config.go          # Application configuration
-│   ├── main.go                # Application initialization
-├── migrations/
-│   └── 20231007_init.sql      # Database schema migration script
-├── config.yaml                # Configuration file
-├── Dockerfile                 # Dockerfile for containerization
-├── docker-compose.yml         # Docker Compose configuration
-├── README.md                  # Project documentation
-└── go.mod
+.
+├── docker-compose.yml      # use for development
+├── Dockerfile
+├── docs                    # general documentation
+│   └── bruno               # Bruno collections ready to use
+│       └── DDD Example
+│           ├── bruno.json
+│           ├── Create task.bru
+│           ├── environments
+│           │   └── Local.bru
+│           ├── Find task.bru
+│           ├── Find task by id.bru
+│           └── Login.bru
+├── init_ddl.sql            # DDL (SQL to create tables, FKs, etc) for database
+├── init_dml.sql            # DML (SQL data) for database
+├── internal
+│   ├── app                 # application layer (DDD)
+│   │   ├── api             # api code
+│   │   │   ├── login.go
+│   │   │   ├── routes.go   # all routing (endpoints) code 
+│   │   │   ├── service.go
+│   │   │   └── task.go
+│   │   └── server.go
+│   ├── domain              # domain layer (DDD)
+│   │   ├── task.go
+│   │   ├── user.go
+│   │   └── user_test.go
+│   └── infrastructure      # infrastructure layer (DDD)
+│       └── persistence     # persistence code
+│           ├── postgresql.go
+│           ├── task_memory,go      # memory implementation of task repository
+│           ├── task_postgresql.go  # postgre implementation of task repository
+│           └── user.go
+├── main
+├── main.go
+├── Makefile
+├── README.md
+└── tests
+    └── integration             # integration tests code 
+        ├── setup               # code used to setup the integration tests
+        │   ├── database.go
+        │   ├── login.go
+        │   └── server.go
+        └── task_test.go        # integration tests for task
 
 ```
-
+<!--
 ## Introduction
 
 1. `cmd/`: This directory contains the application's entry point (main.go), where you configure and start your application.
@@ -139,3 +178,5 @@ Application Layer:
 - https://threedots.tech/post/common-anti-patterns-in-go-web-applications/
 - https://threedots.tech/post/things-to-know-about-dry/
 - https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example
+
+-->
