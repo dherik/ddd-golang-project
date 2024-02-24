@@ -42,7 +42,7 @@ func SetupDatabase() (persistence.Datasource, *dockertest.Pool, *dockertest.Reso
 	// pulls an image, creates a container based on it and runs it
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "postgres",
-		Tag:        "16.2",
+		Tag:        "16.2", // TODO use the same from docker-compose?
 		Env: []string{
 			"POSTGRES_PASSWORD=test_password",
 			"POSTGRES_USER=test_user",
@@ -86,9 +86,6 @@ func SetupDatabase() (persistence.Datasource, *dockertest.Pool, *dockertest.Reso
 	slog.Info("Database for integration tests is up and running!")
 
 	LoadDDL()
-
-	// suite.Pool = *pool
-	// suite.Resource = resource
 
 	return datasource, pool, resource
 }
