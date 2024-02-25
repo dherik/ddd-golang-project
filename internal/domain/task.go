@@ -9,10 +9,10 @@ type Task struct {
 	CreatedAt   time.Time `db:"created_at"`
 }
 
-func NewTask(userId string, desc string) Task {
+func NewTask(userId string, description string) Task {
 	return Task{
 		UserId:      userId,
-		Description: desc,
+		Description: description,
 		CreatedAt:   time.Now().UTC(),
 	}
 }
