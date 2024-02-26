@@ -3,10 +3,10 @@ package domain
 import "time"
 
 type Task struct {
-	Id          int       `db:"id"` //FIXME create persistence.Task
-	UserId      string    `db:"user_id"`
-	Description string    `db:"description"`
-	CreatedAt   time.Time `db:"created_at"`
+	Id          int
+	UserId      string
+	Description string
+	CreatedAt   time.Time
 }
 
 func NewTask(userId string, description string) Task {

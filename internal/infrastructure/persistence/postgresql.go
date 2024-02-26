@@ -35,7 +35,7 @@ func NewPostgreRepository(ds Datasource) PostgreRepository {
 func (pg *PostgreRepository) connect() (*sql.DB, error) {
 	db, err := sql.Open("postgres", pg.DataSource.ConnectionString())
 	if err != nil {
-		return nil, fmt.Errorf("failed connecting to database: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	return db, nil
