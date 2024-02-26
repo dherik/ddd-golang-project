@@ -60,6 +60,7 @@ Below is the extensive list of items I am considering in the project and that I 
 - `launch.json` file for Visual Studio Code already configured for debugging the application
 - Short names for Go packages.
 - Use of dependency injection pattern.
+- Domain models totally independent from other layers, not being reused on persistence (database) or application (API) layers
 
 What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 

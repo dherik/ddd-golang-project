@@ -3,9 +3,18 @@ package persistence
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
+
+type User struct {
+	Id        int       `db:"id"`
+	Username  string    `db:"username"`
+	Email     string    `db:"email"`
+	Password  string    `db:"password"`
+	CreatedAt time.Time `db:"created_at"`
+}
 
 func NewUserRepository(postgreRepository PostgreRepository) domain.UserRepository {
 	return &UserSqlRepository{pgsql: postgreRepository}
@@ -22,7 +31,7 @@ func (r *UserSqlRepository) FindUserByUsername(username string) (domain.User, er
 	}
 	defer db.Close()
 
-	var user domain.User
+	var user User
 	err = db.QueryRow(`SELECT id, username, email, password, created_at FROM users 
 		where username = $1`, username).Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt)
 
@@ -35,5 +44,16 @@ func (r *UserSqlRepository) FindUserByUsername(username string) (domain.User, er
 		return domain.User{}, fmt.Errorf("failed reading rows: %w", err)
 	}
 
-	return user, nil
+	return toUserDomain(user), nil
+}
+
+func toUserDomain(userDb User) domain.User {
+	user := domain.User{
+		Id:        userDb.Id,
+		Username:  userDb.Username,
+		Email:     userDb.Email,
+		Password:  userDb.Password,
+		CreatedAt: userDb.CreatedAt,
+	}
+	return user
 }

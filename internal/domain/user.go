@@ -9,11 +9,11 @@ import (
 )
 
 type User struct {
-	Id        int       `db:"id"`
-	Username  string    `db:"username"`
-	Email     string    `db:"email"`
-	Password  string    `db:"password"`
-	CreatedAt time.Time `db:"created_at"`
+	Id        int
+	Username  string
+	Email     string
+	Password  string
+	CreatedAt time.Time
 }
 
 func (u *User) SetPassword(password string) error {

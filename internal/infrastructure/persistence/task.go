@@ -22,16 +22,16 @@ func NewTaskRepository(pgsql PostgreRepository) domain.TaskRepository {
 	return &TaskSqlRepository{pgsql: pgsql}
 }
 
-func toDomainList(tasksDb []Task) []domain.Task {
+func toTaskDomainList(tasksDb []Task) []domain.Task {
 	tasks := []domain.Task{}
 	for _, taskDb := range tasksDb {
-		task := toDomain(taskDb)
+		task := toTaskDomain(taskDb)
 		tasks = append(tasks, task)
 	}
 	return tasks
 }
 
-func toDomain(taskDb Task) domain.Task {
+func toTaskDomain(taskDb Task) domain.Task {
 	task := domain.Task{
 		Id:          taskDb.Id,
 		UserId:      taskDb.UserId,
@@ -66,7 +66,7 @@ func (r *TaskSqlRepository) FindTasks(startDate time.Time, endDate time.Time) ([
 		tasks = append(tasks, task)
 	}
 
-	return toDomainList(tasks), nil
+	return toTaskDomainList(tasks), nil
 }
 
 func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
@@ -88,7 +88,7 @@ func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (doma
 	if err != nil {
 		return domain.Task{}, nil
 	}
-	return toDomain(Task(taskEntity)), nil
+	return toTaskDomain(Task(taskEntity)), nil
 }
 
 func (r *TaskSqlRepository) GetByUserID(userId string) ([]domain.Task, error) {
@@ -115,7 +115,7 @@ func (r *TaskSqlRepository) GetByUserID(userId string) ([]domain.Task, error) {
 		tasks = append(tasks, task)
 	}
 
-	return toDomainList(tasks), nil
+	return toTaskDomainList(tasks), nil
 }
 
 func (r *TaskSqlRepository) GetByID(id int) (domain.Task, error) {
@@ -134,6 +134,6 @@ func (r *TaskSqlRepository) GetByID(id int) (domain.Task, error) {
 		return domain.Task{}, fmt.Errorf("failed to execute query: %w", err)
 	}
 
-	return toDomain(task), nil
+	return toTaskDomain(task), nil
 
 }
