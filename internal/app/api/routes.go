@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -45,6 +46,7 @@ func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler) Routes {
 
 func (r *Routes) SetupRoutes(e *echo.Echo) {
 
+	e.HTTPErrorHandler = customHTTPErrorHandler
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	config := echojwt.Config{
@@ -66,6 +68,28 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 		return c.String(http.StatusOK, "Ok")
 	})
 
+}
+
+func customHTTPErrorHandler(err error, c echo.Context) {
+	code := http.StatusInternalServerError
+	message := "Internal Server Error"
+
+	if he, ok := err.(*echo.HTTPError); ok {
+		code = he.Code
+		message = fmt.Sprintf("%v", he.Message)
+	}
+
+	// Create a custom error response
+	errorResponse := map[string]interface{}{
+		"timestamp": time.Now().Format(time.RFC3339),
+		"error": map[string]interface{}{
+			"code":    code,
+			"message": message,
+		},
+	}
+
+	// Send the custom error response
+	c.JSON(code, errorResponse)
 }
 
 // var jwtKey = []byte("my_secret_key")

@@ -1,6 +1,13 @@
 package domain
 
-import "time"
+import (
+	"errors"
+	"fmt"
+	"log/slog"
+	"time"
+)
+
+var ErrDescriptionInvalid = errors.New("the description is not valid")
 
 type Task struct {
 	Id          int
@@ -9,12 +16,18 @@ type Task struct {
 	CreatedAt   time.Time
 }
 
-func NewTask(userId string, description string) Task {
+func NewTask(userId string, description string) (Task, error) {
+
+	if len(description) == 0 {
+		slog.Error(fmt.Sprintf("invalid description %s: value is empty", description))
+		return Task{}, ErrDescriptionInvalid
+	}
+
 	return Task{
 		UserId:      userId,
 		Description: description,
 		CreatedAt:   time.Now().UTC(),
-	}
+	}, nil
 }
 
 type TaskRepository interface {
