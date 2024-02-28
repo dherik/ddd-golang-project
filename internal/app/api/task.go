@@ -54,7 +54,7 @@ func (h *TaskHandler) createTask(c echo.Context) error {
 
 	err := h.TaskService.AddTaskToUser(t)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, "failed to create the task for the user")
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
 	}
 
 	return c.NoContent(http.StatusCreated)
