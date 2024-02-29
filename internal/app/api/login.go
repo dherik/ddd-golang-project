@@ -23,11 +23,6 @@ func (h *LoginHandler) login(c echo.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 
-	// Throws unauthorized error
-	// if username != "jon" || password != "shhh!" {
-	// 	return echo.ErrUnauthorized
-	// }
-
 	authorized, err := h.UserService.login(username, password)
 	if err != nil {
 		return fmt.Errorf("failed login for user %s: %w", username, err) //FIXME

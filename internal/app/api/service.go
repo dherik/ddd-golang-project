@@ -90,3 +90,17 @@ func (s *UserService) login(username, password string) (bool, error) {
 	authorized := user.CheckPasswordHash(password)
 	return authorized, nil
 }
+
+func (s *UserService) createUser(userRequest UserRequest) (domain.User, error) {
+
+	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password)
+	if err != nil {
+		return domain.User{}, err //FIXME
+	}
+
+	user, err := s.userRepository.Add(newUser)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}

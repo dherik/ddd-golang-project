@@ -23,24 +23,37 @@ type TaskRequest struct {
 	UserId      string `json:"userId"` //FIXME user.id
 }
 
+type UserRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type UserResponse struct {
+	Id       int    `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
 // jwtCustomClaims are custom claims extending default ones.
 // See https://github.com/golang-jwt/jwt for more examples
 type jwtCustomClaims struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
-	// Admin bool   `json:"admin"`
 	jwt.RegisteredClaims
 }
 
 type Routes struct {
 	TaskHandler  TaskHandler
 	LoginHandler LoginHandler
+	UserHandler  UserHandler
 }
 
-func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler) Routes {
+func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler, userHandler UserHandler) Routes {
 	return Routes{
 		TaskHandler:  taskHandler,
 		LoginHandler: loginHandler,
+		UserHandler:  userHandler,
 	}
 }
 
@@ -56,13 +69,18 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 		SigningKey: []byte("secret"), //FIXME
 	}
 
+	userGroup := e.Group("/users")
+	userGroup.Use(echojwt.WithConfig(config))
+	userGroup.POST("", r.UserHandler.createUser)
+	// userGroup.GET("", r.UserHandler.getUsers)
+
 	taskGroup := e.Group("/tasks")
 	taskGroup.Use(echojwt.WithConfig(config))
 	taskGroup.GET("", r.TaskHandler.getTasks)
 	taskGroup.GET("/:id", r.TaskHandler.getTaskByID) //FIXME using by user id
 	taskGroup.POST("", r.TaskHandler.createTask)
 
-	e.POST("/login", r.LoginHandler.login)
+	e.POST("/login", r.LoginHandler.login) //FIXME returning error 500 if user does not exist
 
 	e.GET("/api/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Ok")

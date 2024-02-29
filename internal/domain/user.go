@@ -39,6 +39,22 @@ func (u *User) hashPassword(password string) (string, error) {
 }
 
 type UserRepository interface {
-	// Login(username string, password string) (User, error)
 	FindUserByUsername(username string) (User, error)
+	Add(user User) (User, error)
+}
+
+func NewUser(username, email, password string) (User, error) {
+	//TODO validations
+	user := User{
+		Username:  username,
+		Email:     email,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	err := user.SetPassword(password)
+	if err != nil {
+		return User{}, err //FIXME
+	}
+
+	return user, nil
 }

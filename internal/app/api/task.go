@@ -54,6 +54,8 @@ func (h *TaskHandler) createTask(c echo.Context) error {
 
 	err := h.TaskService.AddTaskToUser(t)
 	if err != nil {
+		slog.Error("") //FIXME
+		//FIXME return 400 just when is a expected error, otherwise return 500
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
 	}
 

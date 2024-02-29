@@ -11,7 +11,8 @@ type Task struct {
 	Id          int       `db:"id"`
 	UserId      string    `db:"user_id"`
 	Description string    `db:"description"`
-	CreatedAt   time.Time `db:"created_at"`
+	CreatedAt   time.Time `db:"created_at"` //TODO rename to explain that is UTC?
+	//TODO save local timezone of the task
 }
 
 type TaskSqlRepository struct {
