@@ -4,22 +4,38 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
+var (
+	initializedServer     bool
+	initializedServerLock sync.Mutex
+)
+
 func StartServer(dataSource persistence.Datasource) {
-	serverReady := make(chan bool)
+
+	initializedServerLock.Lock()
+	defer initializedServerLock.Unlock()
+
+	if initializedServer {
+		slog.Debug("Server it's already initialized")
+		return
+	}
+
+	slog.Info("Initializing the HTTP server...")
 
 	server := app.Server{
-		Datasource:  dataSource,
-		ServerReady: serverReady,
+		Datasource: dataSource,
 	}
 
 	go server.Start()
 	waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond)
+
+	initializedServer = true
 }
 
 func waitServiceStart(url string, maxRetries int, retryInterval time.Duration) error {

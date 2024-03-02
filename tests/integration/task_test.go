@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"testing"
@@ -14,51 +13,12 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 	_ "github.com/lib/pq"
-	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 type TaskTestSuite struct {
 	suite.Suite
-	*dockertest.Pool
-	*dockertest.Resource
-}
-
-func (suite *TaskTestSuite) SetupSuite() {
-
-	if testing.Short() {
-		suite.T().Skip("Skip test for postgresql repository")
-	}
-
-	dataSource, pool, resource := setup.SetupDatabase()
-
-	suite.Pool = pool
-	suite.Resource = resource
-
-	setup.StartServer(dataSource)
-}
-
-// In order for 'go test' to run this suite, we need to create
-// a normal test function and pass our suite to suite.Run
-func TestExecuteAllSuites(t *testing.T) {
-	suite.Run(t, new(TaskTestSuite))
-}
-
-func (suite *TaskTestSuite) SetupTest() {
-	log.Println("##### reset database setup test")
-	setup.ResetData()
-	setup.LoadDML()
-}
-
-func (suite *TaskTestSuite) TearDownSuite() {
-	// Teardown
-	log.Println("Tear down container")
-
-	// When you're done, kill and remove the container
-	if err := suite.Pool.Purge(suite.Resource); err != nil {
-		log.Fatalf("Could not purge resource: %s", err)
-	}
 }
 
 func (s *TaskTestSuite) TestGetByDate() {

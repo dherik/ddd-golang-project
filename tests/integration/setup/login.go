@@ -31,7 +31,7 @@ func Login(username, password string) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "http://localhost:3333/login", body)
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:3333/login", body) //FIXME port as parameter
 	if err != nil {
 		return "", err
 	}

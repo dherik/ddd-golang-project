@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
@@ -16,9 +17,32 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 )
 
+var (
+	initialized     bool
+	initializedLock sync.Mutex
+	Pool            *dockertest.Pool
+	Resource        *dockertest.Resource
+	Datasource      persistence.Datasource
+)
+
 var db *sql.DB
 
-func SetupDatabase() (persistence.Datasource, *dockertest.Pool, *dockertest.Resource) {
+type DatabaseIT struct {
+	persistence.Datasource
+	*dockertest.Resource
+}
+
+func SetupDatabase() {
+
+	initializedLock.Lock()
+	defer initializedLock.Unlock()
+
+	if initialized {
+		slog.Debug("Database it's already initialized")
+		return
+	}
+
+	fmt.Println("Initializing the database...") //FIXME slog
 
 	datasource := persistence.Datasource{
 		User:     "test_user",
@@ -87,7 +111,11 @@ func SetupDatabase() (persistence.Datasource, *dockertest.Pool, *dockertest.Reso
 
 	LoadDDL()
 
-	return datasource, pool, resource
+	Pool = pool
+	Resource = resource
+	Datasource = datasource
+
+	initialized = true
 }
 
 func LoadDDL() {
@@ -155,5 +183,13 @@ func ResetData() {
 		slog.Info("Database reset successful")
 	} else {
 		slog.Info("No tables found in the database")
+	}
+}
+
+func StopDatabase() {
+	log.Println("Tear down container")
+
+	if err := Pool.Purge(Resource); err != nil {
+		log.Fatalf("Could not purge resource: %s", err)
 	}
 }
