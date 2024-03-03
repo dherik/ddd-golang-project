@@ -69,6 +69,7 @@ Below is the extensive list of items I am considering in the project and that I 
 - Short names for Go packages
 - Use of dependency injection pattern
 - Domain models totally independent from other layers, not using domain objects on persistence (database) or application (API) layers.
+- Use of `gosec` to find security vulnerabilities
 
 What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 
