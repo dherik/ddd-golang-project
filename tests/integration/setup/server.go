@@ -33,7 +33,11 @@ func StartServer(dataSource persistence.Datasource) {
 	}
 
 	go server.Start()
-	waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond)
+	err := waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond)
+	if err != nil {
+		slog.Error(fmt.Sprint("failed waiting HTTP server to start: %w", err))
+		return
+	}
 
 	initializedServer = true
 }

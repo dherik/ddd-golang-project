@@ -92,8 +92,10 @@ func SetupDatabase() {
 
 	slog.Info(fmt.Sprintf("Connecting to database on url: %s", databaseUrl))
 
-	// code := m.Run()
-	resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
+	err = resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
+	if err != nil {
+		log.Fatalf("Error calling resource expire for container: %s", err)
+	}
 
 	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
 	pool.MaxWait = 120 * time.Second

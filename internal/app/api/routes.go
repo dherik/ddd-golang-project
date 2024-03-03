@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -107,7 +108,10 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 	}
 
 	// Send the custom error response
-	c.JSON(code, errorResponse)
+	err = c.JSON(code, errorResponse)
+	if err != nil {
+		slog.Error(fmt.Sprint("failed sending custom error response: %w", err))
+	}
 }
 
 // var jwtKey = []byte("my_secret_key")
