@@ -22,11 +22,7 @@ func (s *UserTestSuite) TestLogin() {
 		s.T().Skip("Skip test for postgresql repository")
 	}
 
-	token, err := setup.Login("admin", "some_password")
-
-	if err != nil {
-		s.T().Fatalf("error while login: %v", err)
-	}
+	token := setup.Login("admin", "some_password")
 
 	if token == "" {
 		s.T().Fatalf("token should not be empty")

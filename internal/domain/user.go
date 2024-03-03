@@ -53,7 +53,7 @@ func NewUser(username, email, password string) (User, error) {
 
 	err := user.SetPassword(password)
 	if err != nil {
-		return User{}, err //FIXME
+		return User{}, fmt.Errorf("failed creating the password for the new user: %w", err)
 	}
 
 	return user, nil

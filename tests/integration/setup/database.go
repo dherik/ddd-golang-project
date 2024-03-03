@@ -42,7 +42,7 @@ func SetupDatabase() {
 		return
 	}
 
-	fmt.Println("Initializing the database...") //FIXME slog
+	slog.Info("Initializing the database...")
 
 	datasource := persistence.Datasource{
 		User:     "test_user",
