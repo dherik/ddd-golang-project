@@ -15,13 +15,13 @@ import (
 type TaskResponse struct {
 	Id          int       `json:"id"`
 	Description string    `json:"description"`
-	UserId      string    `json:"userId"` //FIXME user.id
+	UserId      string    `json:"userId"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type TaskRequest struct {
 	Description string `json:"description"`
-	UserId      string `json:"userId"` //FIXME user.id
+	UserId      string `json:"userId"`
 }
 
 type UserRequest struct {
@@ -67,7 +67,7 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
 		},
-		SigningKey: []byte("secret"), //FIXME
+		SigningKey: []byte("secret"), //FIXME read from config
 	}
 
 	userGroup := e.Group("/users")
@@ -116,22 +116,6 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 
 // var jwtKey = []byte("my_secret_key")
 
-// FIXME: save in the database
-// var users = map[string]string{
-// 	"user1": "password1",
-// 	"user2": "password2",
-// }
-
-// type Credentials struct {
-// 	Password string `json:"password"`
-// 	Username string `json:"username"`
-// }
-
-// type Claims struct {
-// 	Username string `json:"username"`
-// 	jwt.RegisteredClaims
-// }
-
 // type SignInResponse struct {
 // 	Token     string    `json:"token"`
 // 	ExpiresAt time.Time `json:"expiresAt"`
@@ -140,11 +124,6 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 // 	Role         string   `json:"role"`
 // 	RefreshToken string   `json:"refresh_token,omitempty"`
 // 	Metadata     Metadata `json:"metadata,omitempty"`
-// }
-
-// type Metadata struct {
-// 	Email    string `json:"email"`
-// 	FullName string `json:"fullName"`
 // }
 
 type ErrResponse struct {

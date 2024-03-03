@@ -39,10 +39,13 @@ func (s *TaskService) FindTasks(startDate time.Time, endDate time.Time) ([]TaskR
 	return taskResponses, nil
 }
 
-func (s *TaskService) GetTasksByID(id int) TaskResponse {
-	task, _ := s.taskRepository.GetByID(id) //FIXME error
+func (s *TaskService) GetTasksByID(id int) (TaskResponse, error) {
+	task, err := s.taskRepository.GetByID(id)
+	if err != nil {
+		return TaskResponse{}, fmt.Errorf("failed getting user by id: %w", err)
+	}
 	slog.Info(fmt.Sprintf("Found task with id %d", id))
-	return toResponse(task)
+	return toResponse(task), nil
 }
 
 func toResponseArray(tasks []domain.Task) []TaskResponse {
@@ -95,12 +98,12 @@ func (s *UserService) createUser(userRequest UserRequest) (domain.User, error) {
 
 	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password)
 	if err != nil {
-		return domain.User{}, err //FIXME
+		return domain.User{}, fmt.Errorf("failed creating new user: %w", err)
 	}
 
 	user, err := s.userRepository.Add(newUser)
 	if err != nil {
-		return domain.User{}, err
+		return domain.User{}, fmt.Errorf("failed saving new user to repository: %w", err)
 	}
 	return user, nil
 }

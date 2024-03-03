@@ -23,8 +23,8 @@ func (h *UserHandler) createUser(c echo.Context) error {
 
 	u := UserRequest{}
 	if err := c.Bind(&u); err != nil {
-		slog.Error("Error reading task body", slog.String("error", err.Error()))
-		return err //FIXME
+		slog.Error(fmt.Sprintf("failed binding body to user request struct: %s", err.Error()))
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to create the user")
 	}
 
 	_, err := h.UserService.createUser(u)

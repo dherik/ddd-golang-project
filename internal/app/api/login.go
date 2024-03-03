@@ -25,7 +25,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 
 	authorized, err := h.UserService.login(username, password)
 	if err != nil {
-		return fmt.Errorf("failed login for user %s: %w", username, err) //FIXME
+		return fmt.Errorf("failed login for user %s: %w", username, err)
 	}
 	if !authorized {
 		return echo.ErrUnauthorized
@@ -34,8 +34,8 @@ func (h *LoginHandler) login(c echo.Context) error {
 	// Set custom claims
 	expirationTime := time.Now().Add(time.Hour * 72)
 	claims := &jwtCustomClaims{
-		"Jon Snow",        //FIXME
-		"email@email.com", //FIXME
+		username, //FIXME get user's name
+		username, //FIXME get user's email
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
@@ -47,7 +47,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 	// Generate encoded token and send it as response.
 	tokenString, err := token.SignedString([]byte("secret"))
 	if err != nil {
-		return err //FIXME
+		return fmt.Errorf("failed generating encoded token: %w", err)
 	}
 
 	loginResponse := LoginResponse{
