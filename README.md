@@ -2,7 +2,9 @@
 
 ## Introduction
 
-Welcome to the DDD Go Project, a dynamic project built with the Go programming language. This initiative is driven by a passion for DDD (Domain-Driven Design), Go, and test automation. For now the project is just a simple REST API (with authentication) to manage tasks.
+Welcome to the DDD Go Project, a dynamic project built with the Go programming language. This initiative is driven by a passion for DDD (Domain-Driven Design), Go, and test automation. 
+
+For now, the project is just a simple REST API (with authentication) for managing tasks. The DDD strategies applied are still very basic, so consider this project as a simplified implementation of this design. However, I plan to introduce more advanced concepts in the future.
 
 The code still has a lot of small issues and new things to implement. You can check the [Backlog of the project](https://github.com/users/dherik/projects/1) to follow what's comming up.
 
