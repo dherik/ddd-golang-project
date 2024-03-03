@@ -11,11 +11,13 @@ import (
 
 type LoginHandler struct {
 	UserService UserService
+	JWTSecret   string
 }
 
-func NewLoginHandler(userService UserService) LoginHandler {
+func NewLoginHandler(userService UserService, jwtSecret string) LoginHandler {
 	return LoginHandler{
 		UserService: userService,
+		JWTSecret:   jwtSecret,
 	}
 }
 
@@ -45,7 +47,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Generate encoded token and send it as response.
-	tokenString, err := token.SignedString([]byte("secret"))
+	tokenString, err := token.SignedString([]byte(h.JWTSecret))
 	if err != nil {
 		return fmt.Errorf("failed generating encoded token: %w", err)
 	}

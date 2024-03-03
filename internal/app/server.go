@@ -12,8 +12,9 @@ import (
 )
 
 type Server struct {
-	Datasource  persistence.Datasource
-	ServerReady chan bool
+	Datasource persistence.Datasource
+	HTTPPort   int
+	JWTSecret  string
 }
 
 func (s *Server) Start() {
@@ -24,9 +25,9 @@ func (s *Server) Start() {
 	taskService := api.NewTaskService(taskRepository)
 	userService := api.NewUserService(userRepository)
 	taskHandler := api.NewTaskHandler(*taskService)
-	loginHandler := api.NewLoginHandler(userService)
+	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
 	userHandler := api.NewUserHandler(userService)
-	routes := api.NewRouter(taskHandler, loginHandler, userHandler)
+	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
 	echo := echo.New()
 	setupSlog(echo)

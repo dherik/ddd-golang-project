@@ -48,13 +48,15 @@ type Routes struct {
 	TaskHandler  TaskHandler
 	LoginHandler LoginHandler
 	UserHandler  UserHandler
+	JWTSecret    string
 }
 
-func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler, userHandler UserHandler) Routes {
+func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler, userHandler UserHandler, jwtSecret string) Routes {
 	return Routes{
 		TaskHandler:  taskHandler,
 		LoginHandler: loginHandler,
 		UserHandler:  userHandler,
+		JWTSecret:    jwtSecret,
 	}
 }
 
@@ -67,7 +69,7 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
 		},
-		SigningKey: []byte("secret"), //FIXME read from config
+		SigningKey: []byte(r.JWTSecret), //FIXME read from config
 	}
 
 	userGroup := e.Group("/users")

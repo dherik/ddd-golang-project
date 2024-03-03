@@ -3,9 +3,8 @@ package config
 import "github.com/spf13/viper"
 
 type AppConfig struct {
-	DatabaseURL string `mapstructure:"database_url"`
-	RabbitMQURL string `mapstructure:"rabbitmq_url"`
-	HTTPPort    int    `mapstructure:"http_port"`
+	HTTPPort  int    `mapstructure:"http_port"`
+	JWTSecret string `mapstructure:"jwt_secret"`
 	// Add other configuration fields as needed
 }
 
@@ -14,6 +13,7 @@ func LoadConfig(configFilePath string) (*AppConfig, error) {
 
 	// Optionally, set default values for configuration fields
 	// viper.SetDefault("database_url", "default_database_url")
+	viper.SetDefault("http_port", 3333)
 
 	err := viper.ReadInConfig()
 	if err != nil {

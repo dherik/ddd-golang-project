@@ -1,3 +1,2 @@
-database_url: "postgres://user:password@localhost:5432/mydb"
-rabbitmq_url: "amqp://guest:guest@localhost:5672/"
 http_port: 8080
+jwt_secret: "51a9e81e-7107-4fc8-a7fb-a22c8a074055"
