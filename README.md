@@ -14,7 +14,7 @@ You can run the project using:
 
 Both methods are explained below.
 
-### With Docker Compose
+### With just Docker Compose
 
 Just run:
 
@@ -29,7 +29,7 @@ docker compose build
 docker compose down
 ```
 
-### Without Docker Compose
+### With Docker Compose + Makefile
 
 Run the databaase:
 
