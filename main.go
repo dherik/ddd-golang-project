@@ -25,8 +25,8 @@ func main() {
 
 	server := app.Server{
 		Datasource: dataSource,
-		HTTPPort:   cfg.HTTPPort,
-		JWTSecret:  cfg.JWTSecret,
+		HTTPPort:   cfg.HTTP.Port,
+		JWTSecret:  cfg.JWT.Secret,
 	}
 	server.Start()
 }

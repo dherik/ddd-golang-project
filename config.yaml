@@ -1,2 +1,10 @@
-http_port: 8080
-jwt_secret: "51a9e81e-7107-4fc8-a7fb-a22c8a074055"
+http:
+  port: 3333
+database:
+  host: "localhost"
+  port: 5432
+  user: "pguser"
+  password: "pgpassword"
+  name: "dddtasks"
+jwt:
+  secret: "51a9e81e-7107-4fc8-a7fb-a22c8a074055"
