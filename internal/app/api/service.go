@@ -88,7 +88,7 @@ func NewUserService(userRepository domain.UserRepository) UserService {
 func (s *UserService) login(username, password string) (bool, error) {
 	user, err := s.userRepository.FindUserByUsername(username)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to login: %w", err)
 	}
 	authorized := user.CheckPasswordHash(password)
 	return authorized, nil

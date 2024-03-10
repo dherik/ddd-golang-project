@@ -2,11 +2,15 @@ package persistence
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
+
+var ErrUserNotFound = errors.New("the user was not found")
 
 type User struct {
 	Id        int       `db:"id"`
@@ -76,8 +80,8 @@ func (r *UserSqlRepository) FindUserByUsername(username string) (domain.User, er
 		where username = $1`, username).Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt)
 
 	if err == sql.ErrNoRows {
-		// TODO return specific error for user not found
-		return domain.User{}, fmt.Errorf("user '%s' not found: %w", username, err)
+		slog.Error(fmt.Sprintf("user '%s' was not found: %s", username, err.Error()))
+		return domain.User{}, ErrUserNotFound
 	}
 
 	if err != nil {

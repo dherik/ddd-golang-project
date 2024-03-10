@@ -1,10 +1,12 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -27,7 +29,10 @@ func (h *LoginHandler) login(c echo.Context) error {
 
 	authorized, err := h.UserService.login(username, password)
 	if err != nil {
-		return fmt.Errorf("failed login for user %s: %w", username, err)
+		if errors.Is(err, persistence.ErrUserNotFound) {
+			return echo.NewHTTPError(http.StatusUnauthorized, "user not found")
+		}
+		return fmt.Errorf("failed login for user '%s': %w", username, err)
 	}
 	if !authorized {
 		return echo.ErrUnauthorized
