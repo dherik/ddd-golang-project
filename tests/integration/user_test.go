@@ -53,21 +53,7 @@ func (s *UserTestSuite) TestAddUser() {
 		Password: "some_user_password",
 	}
 
-	requestBody, err := json.Marshal(payload)
-	if err != nil {
-		s.T().Fatalf("Error encoding JSON: %v", err)
-	}
-
-	url := fmt.Sprintf("http://localhost:%d/users", 3333)                  //FIXME port
-	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody)) //TODO duplicated port, get from s.port (parametrized)
-	s.NoError(err)
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := http.Client{}
-	response, err := client.Do(req)
-	s.NoError(err)
+	response := addUser(s, payload, token)
 	s.Equal(http.StatusCreated, response.StatusCode)
 
 	byteBody, err := io.ReadAll(response.Body)
@@ -78,9 +64,43 @@ func (s *UserTestSuite) TestAddUser() {
 
 }
 
-// func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
+func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
 
-// }
+	token := setup.Login("admin", "some_password")
+
+	payload := api.UserRequest{
+		Username: "some_user",
+		Email:    "some_user@example.com",
+		Password: "some_user_password",
+	}
+
+	addUser(s, payload, token)
+
+	// add same user again
+	response := addUser(s, payload, token)
+
+	s.Equal(http.StatusConflict, response.StatusCode)
+}
+
+func addUser(s *UserTestSuite, payload api.UserRequest, token string) *http.Response {
+	requestBody, err := json.Marshal(payload)
+	if err != nil {
+		s.T().Fatalf("Error encoding JSON: %v", err)
+	}
+
+	//TODO duplicated port, get from s.port (parametrized)
+	url := fmt.Sprintf("http://localhost:%d/users", 3333)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody))
+	s.NoError(err)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.Client{}
+	response, err := client.Do(req)
+	s.NoError(err)
+	return response
+}
 
 func login(username, password string) (*http.Response, error) {
 	body := &bytes.Buffer{}

@@ -1,12 +1,16 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
+
+var ErrUserAlreadyExists = errors.New("a user with the same username already exists")
 
 type TaskService struct {
 	taskRepository domain.TaskRepository
@@ -99,6 +103,11 @@ func (s *UserService) createUser(userRequest UserRequest) (domain.User, error) {
 	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("failed creating new user: %w", err)
+	}
+
+	_, err = s.userRepository.FindUserByUsername(newUser.Username)
+	if err != persistence.ErrUserNotFound {
+		return domain.User{}, ErrUserAlreadyExists
 	}
 
 	user, err := s.userRepository.Add(newUser)
