@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"testing"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
@@ -22,9 +21,6 @@ type TaskTestSuite struct {
 }
 
 func (s *TaskTestSuite) TestGetByDate() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	token := setup.Login("admin", "some_password")
 
@@ -65,9 +61,6 @@ func (s *TaskTestSuite) TestGetByDate() {
 }
 
 func (s *TaskTestSuite) TestGetByID() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	token := setup.Login("admin", "some_password")
 
@@ -94,9 +87,6 @@ func (s *TaskTestSuite) TestGetByID() {
 }
 
 func (s *TaskTestSuite) TestAddTask() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	token := setup.Login("admin", "some_password")
 
@@ -132,9 +122,6 @@ func (s *TaskTestSuite) TestAddTask() {
 }
 
 func (s *TaskTestSuite) TestCannotAddTaskWhenDescriptionEmpty() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	token := setup.Login("admin", "some_password")
 

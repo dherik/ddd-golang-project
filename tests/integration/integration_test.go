@@ -12,14 +12,6 @@ type IntegrationTestSuite struct {
 	suite.Suite
 }
 
-func (suite *TaskTestSuite) SetupSuite() {
-
-	if testing.Short() {
-		suite.T().Skip("Skip test for postgresql repository")
-	}
-
-}
-
 // Will run after each test in the Suites
 func (suite *TaskTestSuite) SetupTest() {
 	slog.Info("Reseting database for the next test")
@@ -30,6 +22,10 @@ func (suite *TaskTestSuite) SetupTest() {
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to suite.Run
 func TestExecuteAllSuites(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip("Skip integration tests execution")
+	}
 
 	setup.SetupIntegrationTest()
 

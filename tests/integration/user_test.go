@@ -5,7 +5,6 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"testing"
 
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 	"github.com/stretchr/testify/suite"
@@ -22,9 +21,6 @@ type UserTestSuite struct {
 }
 
 func (s *UserTestSuite) TestLoginSuccess() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	token := setup.Login("admin", "some_password")
 
@@ -34,18 +30,12 @@ func (s *UserTestSuite) TestLoginSuccess() {
 }
 
 func (s *UserTestSuite) TestLoginUnauthorizedWhenUserNotFound() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	response, _ := login("non_existent_user", "some_password")
 	s.Equal(http.StatusUnauthorized, response.StatusCode)
 }
 
 func (s *UserTestSuite) TestLoginUnauthorizedWhenPasswordIsWrong() {
-	if testing.Short() {
-		s.T().Skip("Skip test for postgresql repository")
-	}
 
 	response, _ := login("admin", "some_wrong_password")
 	s.Equal(http.StatusUnauthorized, response.StatusCode)
