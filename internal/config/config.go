@@ -1,6 +1,10 @@
 package config
 
-import "github.com/spf13/viper"
+import (
+	"fmt"
+
+	"github.com/spf13/viper"
+)
 
 type HTTP struct {
 	Port int `mapstructure:"port"`
@@ -29,13 +33,13 @@ func LoadConfig(configFilePath string) (*AppConfig, error) {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
 	var config AppConfig
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	return &config, nil
