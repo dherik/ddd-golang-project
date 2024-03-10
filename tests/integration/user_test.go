@@ -2,16 +2,18 @@ package integration
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
 
+	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 	"github.com/stretchr/testify/suite"
 )
 
-//TODO login test
-//TODO login error test
 //TODO try to access protect endpoint not authenticated test
 //TODO try to access protect endpoint authenticated test
 //TODO create user and login test
@@ -40,6 +42,45 @@ func (s *UserTestSuite) TestLoginUnauthorizedWhenPasswordIsWrong() {
 	response, _ := login("admin", "some_wrong_password")
 	s.Equal(http.StatusUnauthorized, response.StatusCode)
 }
+
+func (s *UserTestSuite) TestAddUser() {
+
+	token := setup.Login("admin", "some_password")
+
+	payload := api.UserRequest{
+		Username: "some_user",
+		Email:    "some_user@example.com",
+		Password: "some_user_password",
+	}
+
+	requestBody, err := json.Marshal(payload)
+	if err != nil {
+		s.T().Fatalf("Error encoding JSON: %v", err)
+	}
+
+	url := fmt.Sprintf("http://localhost:%d/users", 3333)                  //FIXME port
+	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody)) //TODO duplicated port, get from s.port (parametrized)
+	s.NoError(err)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.Client{}
+	response, err := client.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusCreated, response.StatusCode)
+
+	byteBody, err := io.ReadAll(response.Body)
+	s.NoError(err)
+
+	s.Equal("", string(byteBody))
+	response.Body.Close()
+
+}
+
+// func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
+
+// }
 
 func login(username, password string) (*http.Response, error) {
 	body := &bytes.Buffer{}

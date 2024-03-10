@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 	_ "github.com/lib/pq"
@@ -90,7 +91,7 @@ func (s *TaskTestSuite) TestAddTask() {
 
 	token := setup.Login("admin", "some_password")
 
-	payload := domain.Task{
+	payload := api.TaskRequest{
 		UserId:      "1",
 		Description: "Hello, World!",
 	}
