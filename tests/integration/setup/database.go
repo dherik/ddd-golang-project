@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -13,23 +14,24 @@ import (
 
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	_ "github.com/lib/pq"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 var (
-	initialized     bool
-	initializedLock sync.Mutex
-	Pool            *dockertest.Pool
-	Resource        *dockertest.Resource
-	Datasource      persistence.Datasource
+	initialized       bool
+	initializedLock   sync.Mutex
+	PostgresContainer *postgres.PostgresContainer
+	Datasource        persistence.Datasource
+	Ctx               context.Context
 )
 
 var db *sql.DB
 
 type DatabaseIT struct {
 	persistence.Datasource
-	*dockertest.Resource
 }
 
 func SetupDatabase() {
@@ -50,71 +52,46 @@ func SetupDatabase() {
 		Name:     "test_db",
 	}
 
-	slog.Info("starting docker")
+	slog.Info("Starting docker")
 
-	pool, err := dockertest.NewPool("")
+	ctx := context.Background()
+	postgresContainer, err := postgres.RunContainer(ctx,
+		testcontainers.WithImage("docker.io/postgres:16.2-alpine"),
+		// postgres.WithInitScripts(filepath.Join("testdata", "init-user-db.sh")),
+		// postgres.WithConfigFile(filepath.Join("testdata", "my-postgres.conf")),
+		postgres.WithDatabase("test_db"),
+		postgres.WithUsername("test_user"),
+		postgres.WithPassword("test_password"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(5*time.Second)),
+	)
 	if err != nil {
-		log.Fatalf("Could not construct pool: %s", err)
+		log.Fatalf("failed to start container: %s", err)
 	}
 
-	// uses pool to try to connect to Docker
-	err = pool.Client.Ping()
-	if err != nil {
-		log.Fatalf("Could not connect to Docker: %s", err)
-	}
-
-	// pulls an image, creates a container based on it and runs it
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "postgres",
-		Tag:        "16.2", // TODO use the same from docker-compose?
-		Env: []string{
-			"POSTGRES_PASSWORD=test_password",
-			"POSTGRES_USER=test_user",
-			"POSTGRES_DB=test_db",
-			"listen_addresses = '*'",
-		},
-	}, func(config *docker.HostConfig) {
-		// set AutoRemove to true so that stopped container goes away by itself
-		config.AutoRemove = true
-		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
-	})
-
-	if err != nil {
-		log.Fatalf("Could not start resource: %s", err)
-	}
-
-	hostAndPort := resource.GetHostPort("5432/tcp")
-	hostAndPortArray := strings.Split(hostAndPort, ":")
-	datasource.Host = hostAndPortArray[0]
-	port, _ := strconv.Atoi(hostAndPortArray[1])
+	//FIXME it's ugly
+	host, _ := postgresContainer.Host(ctx)
+	datasource.Host = host
+	portNat, _ := postgresContainer.MappedPort(ctx, "5432")
+	port, _ := strconv.Atoi(portNat.Port())
 	datasource.Port = port
-	databaseUrl := datasource.ConnectionString()
+	databaseUrl, _ := postgresContainer.ConnectionString(ctx, "sslmode=disable")
 
 	slog.Info(fmt.Sprintf("Connecting to database on url: %s", databaseUrl))
 
-	err = resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
+	db, err = sql.Open("postgres", databaseUrl)
 	if err != nil {
-		log.Fatalf("Error calling resource expire for container: %s", err)
-	}
-
-	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
-	pool.MaxWait = 120 * time.Second
-	if err = pool.Retry(func() error {
-		db, err = sql.Open("postgres", databaseUrl)
-		if err != nil {
-			return err
-		}
-		return db.Ping()
-	}); err != nil {
-		log.Fatalf("Could not connect to database: %s", err)
+		log.Fatalf("Could not open SQL connection: %s", err)
 	}
 
 	slog.Info("Database for integration tests is up and running!")
 
 	LoadDDL()
 
-	Pool = pool
-	Resource = resource
+	PostgresContainer = postgresContainer
+	Ctx = ctx
 	Datasource = datasource
 
 	initialized = true
@@ -191,7 +168,7 @@ func ResetData() {
 func StopDatabase() {
 	log.Println("Tear down container")
 
-	if err := Pool.Purge(Resource); err != nil {
-		log.Fatalf("Could not purge resource: %s", err)
+	if err := PostgresContainer.Terminate(Ctx); err != nil {
+		log.Fatalf("failed to terminate postgresql container: %s", err)
 	}
 }
