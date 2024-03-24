@@ -1,5 +1,7 @@
 # Define variables
 GOCMD := go
+GOINSTALL := $(GOCMD) install
+GOGET := $(GOCMD) get
 GOBUILD := $(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST := $(GOCMD) test
@@ -7,14 +9,14 @@ BINARY_NAME := main
 MAIN_FILE := main.go
 
 vulnerability-check:
-	go install golang.org/x/vuln/cmd/govulncheck@latest
+	$(GOINSTALL) golang.org/x/vuln/cmd/govulncheck@latest
 	govulncheck ./...
 
 dependency:
-	go get -v ./...
+	$(GOGET) -v ./...
 
 unit-test: dependency
-	$(GOTEST) -v -short  ./...
+	$(GOTEST) -v -short ./...
 
 integration-test: dependency
 	$(GOTEST) -coverpkg=./... -coverprofile=coverage.out -v ./...
