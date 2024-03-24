@@ -6,6 +6,10 @@ GOTEST := $(GOCMD) test
 BINARY_NAME := main
 MAIN_FILE := main.go
 
+vulnerability-check:
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	govulncheck ./...
+
 dependency:
 	go get -v ./...
 
