@@ -21,13 +21,13 @@ Both methods are explained below.
 Just run:
 
 ```sh
+docker compose build
 docker compose up
 ```
 
 To build the application or bring down the containers:
 
 ```sh
-docker compose build
 docker compose down
 ```
 
@@ -52,6 +52,12 @@ To run the integration tests:
 ```sh
 make integration-test
 ```
+
+## Run K6 load test
+
+Install the latest version of [K6](https://github.com/grafana/k6/) to be able to execute the tests.
+
+After install K6, just run `docker compose up` in one terminal and `make load-test-create-tasks` on another terminal. The test will finish in 3 minutes. You can use the same process for the other `load-test-*`.
 
 ## All itens considered for the project
 

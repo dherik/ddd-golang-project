@@ -16,6 +16,12 @@ type LoginHandler struct {
 	JWTSecret   string
 }
 
+// Credentials struct to represent the JSON request body
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func NewLoginHandler(userService UserService, jwtSecret string) LoginHandler {
 	return LoginHandler{
 		UserService: userService,
@@ -24,8 +30,20 @@ func NewLoginHandler(userService UserService, jwtSecret string) LoginHandler {
 }
 
 func (h *LoginHandler) login(c echo.Context) error {
-	username := c.FormValue("username")
-	password := c.FormValue("password")
+
+	creds := new(Credentials)
+
+	// Bind the request body to the Credentials struct
+	if err := c.Bind(creds); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if creds.Username == "" || creds.Password == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "username or password is empty")
+	}
+
+	username := creds.Username
+	password := creds.Password
 
 	authorized, err := h.UserService.login(username, password)
 	if err != nil {

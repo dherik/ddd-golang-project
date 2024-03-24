@@ -8,6 +8,9 @@ GOTEST := $(GOCMD) test
 BINARY_NAME := main
 MAIN_FILE := main.go
 
+load-test-create-tasks:
+	K6_WEB_DASHBOARD=true k6 run tests/load/k6_create_tasks.js
+
 # upgrade all dependencies to the latest version available
 # 'go mod tidy' ensures go.mod is sync with source code and clean it up unused deps
 upgrade-deps-latest-version:
@@ -44,7 +47,7 @@ clean:
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 
-run:
+run: build
 	DB_HOST=127.0.0.1 ./$(BINARY_NAME)
 
 .PHONY: build test clean
