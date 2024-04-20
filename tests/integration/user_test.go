@@ -80,6 +80,7 @@ func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
 	response := addUser(s.T(), payload, token)
 
 	s.Equal(http.StatusConflict, response.StatusCode)
+
 }
 
 // func (s *UserTestSuite) TestCannotAccessTaskFromAnotherUser() {

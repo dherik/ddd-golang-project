@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -44,7 +45,19 @@ type UserRepository interface {
 }
 
 func NewUser(username, email, password string) (User, error) {
-	//TODO validations
+
+	if len(username) > 256 || username == "" {
+		return User{}, errors.New("username cannot be empty or longer than 256 characters")
+	}
+
+	if len(email) > 256 || email == "" {
+		return User{}, errors.New("email cannot be empty or longer than 256 characters")
+	}
+
+	if password == "" || len(password) < 8 {
+		return User{}, errors.New("password must be at least 8 characters long")
+	}
+
 	user := User{
 		Username:  username,
 		Email:     email,
