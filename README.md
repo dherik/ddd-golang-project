@@ -64,20 +64,22 @@ After install K6, just run `docker compose up` in one terminal and `make load-te
 Below is the extensive list of items I am considering in the project and that I classified as essential for a good Go project. The idea is that each project will have each decision well-founded. As mentioned before, there are still many things to be adjusted, so consider that this project is always evolving.
 
 - Using Docker Compose to facilitate development
-- Organized README.md with all the necessary information to run the project
+- Simple step to have the service up and running in the developer machine
+- Organized README.md file with all the necessary information to run and test the project
 - Unit tests
-- Integration tests using the testify and Docker Test libraries to control test scenarios
+- Integration tests using the testify to control test scenarios and TestContainers to set up the database
 - REST API endpoints following market standards (using plural nouns, avoiding verbs, employing hierarchy, adopting correct standards for representing dates, etc.)
 - Secure endpoints with authentication (JWT)
 - Using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/)
-- Use of structured logging (Go slog)
-- Use of Makefile
+- Use of structured logging using Go `slog`
+- Very well organized Makefile
 - Versioned files with the collection of endpoints, ready to import on [Bruno](https://www.usebruno.com)
 - `launch.json` file for Visual Studio Code already configured for debugging the application
-- Short names for Go packages
+- Use of short names for Go packages
 - Use of dependency injection pattern
 - Domain models totally independent from other layers, not using domain objects on persistence (database) or application (API) layers.
 - Use of `gosec` to find security vulnerabilities
+- Use of Go upgrade tool to upgrade the dependencies to the latest version
 
 What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 
