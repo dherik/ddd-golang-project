@@ -1,6 +1,6 @@
 module github.com/dherik/ddd-golang-project
 
-go 1.22.1
+go 1.22.2
 
 require (
 	github.com/spf13/viper v1.18.2
