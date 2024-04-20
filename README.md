@@ -25,7 +25,7 @@ docker compose build
 docker compose up
 ```
 
-To build the application or bring down the containers:
+To bring down the containers:
 
 ```sh
 docker compose down
