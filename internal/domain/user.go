@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -58,6 +59,18 @@ func NewUser(username, email, password string) (User, error) {
 		return User{}, errors.New("password must be at least 8 characters long")
 	}
 
+	if !hasSpecialCharacter(password) {
+		return User{}, errors.New("password must contain at least one special character")
+	}
+
+	if !containsNumber(password) {
+		return User{}, errors.New("password must contain at least one number")
+	}
+
+	if !containsUppercaseAndLowercase(password) {
+		return User{}, errors.New("password must contain at least one uppercase letter and one lowercase letter")
+	}
+
 	user := User{
 		Username:  username,
 		Email:     email,
@@ -70,4 +83,40 @@ func NewUser(username, email, password string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func hasSpecialCharacter(password string) bool {
+	specialChar := false
+	for _, char := range password {
+		switch char {
+		case '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '-', '=':
+			specialChar = true
+		}
+	}
+	return specialChar
+}
+
+func containsNumber(s string) bool {
+	for _, char := range s {
+		if unicode.IsDigit(char) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsUppercaseAndLowercase(s string) bool {
+	var hasUppercase, hasLowercase bool
+	for _, char := range s {
+		if unicode.IsUpper(char) {
+			hasUppercase = true
+		}
+		if unicode.IsLower(char) {
+			hasLowercase = true
+		}
+		if hasUppercase && hasLowercase {
+			return true
+		}
+	}
+	return false
 }
