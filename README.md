@@ -61,13 +61,14 @@ After install K6, just run `docker compose up` in one terminal and `make load-te
 
 ## All itens considered for the project
 
-Below is the extensive list of items I am considering in the project and that I classified as essential for a good Go project. The idea is that each project will have each decision well-founded. As mentioned before, there are still many things to be adjusted, so consider that this project is always evolving.
+Below is the extensive list of items I am considering in the project and that I classified as essential for a good Go project and decisions that make the developer life easier as possible. As mentioned before, there are still many things to be adjusted, so consider that this project is always evolving.
 
 - Using Docker Compose to facilitate development
 - Simple step to have the service up and running in the developer machine
 - Organized README.md file with all the necessary information to run and test the project
 - Unit tests
 - Integration tests using the testify to control test scenarios and TestContainers to set up the database
+- You can execute integration tests directly from your favorite IDE, as all necessary setup configurations are embedded within the code.
 - REST API endpoints following market standards (using plural nouns, avoiding verbs, employing hierarchy, adopting correct standards for representing dates, etc.)
 - Secure endpoints with authentication (JWT)
 - Using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/)
