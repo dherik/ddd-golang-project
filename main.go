@@ -5,12 +5,13 @@ import (
 
 	"github.com/dherik/ddd-golang-project/internal/app"
 	"github.com/dherik/ddd-golang-project/internal/config"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
 func main() {
 
-	dataSource := persistence.Datasource{
+	pgsqlDataSource := persistence.Datasource{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     5432,         //FIXME
 		User:     "pguser",     //FIXME
@@ -23,10 +24,18 @@ func main() {
 		panic(err)
 	}
 
+	rabbitmqDataSource := messaging.RabbitMQDataSource{
+		Host:     "localhost",
+		Port:     5162,
+		User:     "guest",
+		Password: "guest",
+	}
+
 	server := app.Server{
-		Datasource: dataSource,
-		HTTPPort:   cfg.HTTP.Port,
-		JWTSecret:  cfg.JWT.Secret,
+		RabbitMQDataSource: rabbitmqDataSource,
+		Datasource:         pgsqlDataSource,
+		HTTPPort:           cfg.HTTP.Port,
+		JWTSecret:          cfg.JWT.Secret,
 	}
 	server.Start()
 }

@@ -6,15 +6,17 @@ import (
 	"os"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 type Server struct {
-	Datasource persistence.Datasource
-	HTTPPort   int
-	JWTSecret  string
+	Datasource         persistence.Datasource
+	RabbitMQDataSource messaging.RabbitMQDataSource
+	HTTPPort           int
+	JWTSecret          string
 }
 
 func (s *Server) Start() {
@@ -28,6 +30,10 @@ func (s *Server) Start() {
 	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
 	userHandler := api.NewUserHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
+
+	// rabbitmq := messaging.NewRabbitMQ()
+	// calendarQueue := messaging.NewCalendarQueue(rabbitmq)
+	// calendarQueue.StartListenEvents()
 
 	echo := echo.New()
 	setupSlog(echo)

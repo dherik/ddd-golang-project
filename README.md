@@ -10,6 +10,10 @@ The code still has a lot of small issues and new things to implement. You can ch
 
 ## How to run
 
+Prerequisites:
+- Docker
+- Go
+
 You can run the project using:
 - Docker Compose;
 - Using the `make` command and initializing just the database (also with Docker Compose). This method is easier to debug the application.
@@ -36,7 +40,7 @@ docker compose down
 Run the databaase:
 
 ```sh
-docker compose up postgres
+docker compose up postgres rabbitmq
 ```
 
 And run the application using the **Makefile**:
