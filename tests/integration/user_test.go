@@ -50,7 +50,7 @@ func (s *UserTestSuite) TestAddUser() {
 	payload := api.UserRequest{
 		Username: "some_user",
 		Email:    "some_user@example.com",
-		Password: "some_user_password",
+		Password: "_1SomeValidPassword",
 	}
 
 	response := addUser(s.T(), payload, token)
@@ -71,7 +71,7 @@ func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
 	payload := api.UserRequest{
 		Username: "some_user",
 		Email:    "some_user@example.com",
-		Password: "some_user_password",
+		Password: "_1SomeValidPassword",
 	}
 
 	addUser(s.T(), payload, token)
