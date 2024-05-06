@@ -81,6 +81,7 @@ Below is the extensive list of items I am considering in the project and that I 
 - Domain models totally independent from other layers, not using domain objects on persistence (database) or application (API) layers.
 - Use of `gosec` to find security vulnerabilities
 - Use of Go upgrade tool to upgrade the dependencies to the latest version
+- Pull Request template to provide a baseline standard of informational quality and organizational rigor
 
 What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 
