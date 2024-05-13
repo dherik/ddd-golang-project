@@ -26,7 +26,7 @@ func main() {
 
 	rabbitmqDataSource := messaging.RabbitMQDataSource{
 		Host:     "localhost",
-		Port:     5162,
+		Port:     5672,
 		User:     "guest",
 		Password: "guest",
 	}

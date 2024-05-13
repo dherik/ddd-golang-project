@@ -31,9 +31,9 @@ func (s *Server) Start() {
 	userHandler := api.NewUserHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
-	// rabbitmq := messaging.NewRabbitMQ()
-	// calendarQueue := messaging.NewCalendarQueue(rabbitmq)
-	// calendarQueue.StartListenEvents()
+	rabbitmq := messaging.NewRabbitMQ(s.RabbitMQDataSource)
+	calendarQueue := messaging.NewCalendarQueue(rabbitmq)
+	calendarQueue.StartListenEvents()
 
 	echo := echo.New()
 	setupSlog(echo)

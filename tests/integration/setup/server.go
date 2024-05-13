@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
@@ -16,7 +17,7 @@ var (
 	initializedServerLock sync.Mutex
 )
 
-func StartServer(dataSource persistence.Datasource) {
+func StartServer(dataSource persistence.Datasource, rabbitMQDataSource messaging.RabbitMQDataSource) {
 
 	initializedServerLock.Lock()
 	defer initializedServerLock.Unlock()
@@ -29,13 +30,14 @@ func StartServer(dataSource persistence.Datasource) {
 	slog.Info("Initializing the HTTP server...")
 
 	server := app.Server{
-		Datasource: dataSource,
+		Datasource:         dataSource,
+		RabbitMQDataSource: rabbitMQDataSource,
 	}
 
 	go server.Start()
 	err := waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond) //FIXME host and port
 	if err != nil {
-		slog.Error(fmt.Sprint("failed waiting HTTP server to start: %w", err))
+		slog.Error(fmt.Sprintf("failed waiting HTTP server to start: %s", err.Error()))
 		return
 	}
 

@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"log"
+	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -11,47 +12,34 @@ type RabbitMQDataSource struct {
 	Port     int
 	User     string
 	Password string
+	AmqpURL  string
+}
+
+func (ds *RabbitMQDataSource) ConnectionString() string {
+	if ds.AmqpURL != "" {
+		return ds.AmqpURL
+	}
+	port := strconv.Itoa(ds.Port)
+	return "amqp://" + ds.User + ":" + ds.Password + "@" + ds.Host + ":" + port
 }
 
 type RabbitMQ struct {
+	RabbitMQDataSource RabbitMQDataSource
 }
 
-func NewRabbitMQ() RabbitMQ {
-	return RabbitMQ{}
+func NewRabbitMQ(rabbitMQDataSource RabbitMQDataSource) RabbitMQ {
+	return RabbitMQ{
+		RabbitMQDataSource: rabbitMQDataSource,
+	}
 }
 
 func (r *RabbitMQ) connect() (*amqp.Connection, error) {
 
-	conn, err := amqp.Dial(
-		"amqp://guest:guest@localhost", //FIXME
-	)
+	conn, err := amqp.Dial(r.RabbitMQDataSource.ConnectionString())
+
 	if err != nil {
-		// log.Fatal("deu ruim")
-		log.Fatal(err) //FIXME
+		log.Fatalf("failed to connect to RabbitMQ : %v", err)
 		return &amqp.Connection{}, err
 	}
-	// defer conn.Close()
-
 	return conn, nil
-
-	// consumer, err := rabbitmq.NewConsumer(
-	// 	conn,
-	// 	"my_queue",
-	// 	rabbitmq.WithConsumerOptionsRoutingKey("my_routing_key"),
-	// 	rabbitmq.WithConsumerOptionsExchangeName("events"),
-	// 	rabbitmq.WithConsumerOptionsExchangeDeclare,
-	// )
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer consumer.Close()
-
-	// err = consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
-	// 	log.Printf("consumed: %v", string(d.Body))
-	// 	// rabbitmq.Ack, rabbitmq.NackDiscard, rabbitmq.NackRequeue
-	// 	return rabbitmq.Ack
-	// })
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 }

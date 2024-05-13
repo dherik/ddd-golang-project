@@ -1,6 +1,10 @@
 package messaging
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"log/slog"
+)
 
 type CalendarQueue struct {
 	RabbitMQ RabbitMQ
@@ -11,6 +15,7 @@ func NewCalendarQueue(rabbitmq RabbitMQ) CalendarQueue {
 }
 
 func (tq *CalendarQueue) StartListenEvents() error {
+
 	conn, err := tq.RabbitMQ.connect()
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -19,22 +24,6 @@ func (tq *CalendarQueue) StartListenEvents() error {
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
-
-	/*
-		The producer of the message should declare the exchange, not
-		the consumer. I am declaring here just to make the use
-		of RabbitMQ easier for this project.
-	*/
-	// err = ch.ExchangeDeclare(
-	// 	"calendar", // name
-	// 	"fanout",   // type
-	// 	true,       // durable
-	// 	false,      // auto-deleted
-	// 	false,      // internal
-	// 	false,      // no-wait
-	// 	nil,        // arguments
-	// )
-	// failOnError(err, "Failed to declare an exchange")
 
 	/*
 		The queue name start with the name of the service and the event
@@ -80,21 +69,15 @@ func (tq *CalendarQueue) StartListenEvents() error {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	var forever chan struct{}
-
 	go func() {
 		for d := range msgs {
 			// Process the message
-			log.Printf("Received message: %s", d.Body)
+			slog.Info(fmt.Sprintf("Received message: %s", d.Body))
 		}
 	}()
 
-	// Wait for Ctrl+C to exit
-	log.Println("Listening for messages...")
+	slog.Info("Listening for messages...")
 
-	// log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
-
-	<-forever
 	return nil
 }
 
