@@ -59,9 +59,9 @@ Install the latest version of [K6](https://github.com/grafana/k6/) to be able to
 
 After install K6, just run `docker compose up` in one terminal and `make load-test-create-tasks` on another terminal. The test will finish in 3 minutes. You can use the same process for the other `load-test-*`.
 
-## All itens considered for the project
+## Technical features
 
-Below is the extensive list of items I am considering in the project and that I classified as essential for a good Go project and decisions that make the developer life easier as possible. As mentioned before, there are still many things to be adjusted, so consider that this project is always evolving.
+Below is the extensive list of items that are implemented in the project that I classified as essential for a good Go project and make the developer's life easier as possible. As mentioned before, there are still many things to be adjusted, so consider that this project is always evolving.
 
 - Using Docker Compose to facilitate development
 - Simple step to have the service up and running in the developer machine
