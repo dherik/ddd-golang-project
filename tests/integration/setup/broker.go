@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging"
+	mq "github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq" //FIXME
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/rabbitmq"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -19,7 +19,7 @@ var (
 	initializedBroker     bool
 	initializedBrokerLock sync.Mutex
 	// PostgresContainer *postgres.PostgresContainer
-	RabbitMQDataSource messaging.RabbitMQDataSource
+	RabbitMQDataSource mq.RabbitMQDataSource
 	// Ctx               context.Context
 )
 
@@ -72,7 +72,7 @@ func SetupRabbitMQ() {
 
 	host, _ := rabbitmqContainer.Host(ctx)
 
-	rabbitmqDataSource := messaging.RabbitMQDataSource{
+	rabbitmqDataSource := mq.RabbitMQDataSource{
 		Host:     host,
 		Port:     port,
 		User:     rabbitmqContainer.AdminUsername,

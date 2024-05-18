@@ -1,11 +1,12 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
 	"github.com/dherik/ddd-golang-project/internal/config"
-	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
@@ -21,10 +22,10 @@ func main() {
 
 	cfg, err := config.LoadConfig("config.yaml")
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to load the config: %v", err)
 	}
 
-	rabbitmqDataSource := messaging.RabbitMQDataSource{
+	rabbitmqDataSource := rabbitmq.RabbitMQDataSource{
 		Host:     "localhost",
 		Port:     5672,
 		User:     "guest",

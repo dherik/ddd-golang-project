@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
-	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
@@ -17,7 +17,7 @@ var (
 	initializedServerLock sync.Mutex
 )
 
-func StartServer(dataSource persistence.Datasource, rabbitMQDataSource messaging.RabbitMQDataSource) {
+func StartServer(dataSource persistence.Datasource, rabbitMQDataSource rabbitmq.RabbitMQDataSource) {
 
 	initializedServerLock.Lock()
 	defer initializedServerLock.Unlock()

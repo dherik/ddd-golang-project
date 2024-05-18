@@ -8,8 +8,10 @@ type TaskMessagingHandler struct {
 	taskRepository domain.TaskRepository
 }
 
-func NewTaskMessagingHandler(taskRepository domain.TaskRepository) {
-
+func NewTaskMessagingHandler(taskRepository domain.TaskRepository) TaskMessagingHandler {
+	return TaskMessagingHandler{
+		taskRepository: taskRepository,
+	}
 }
 
 func ReadNewTasks() {
