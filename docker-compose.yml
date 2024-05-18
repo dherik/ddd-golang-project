@@ -25,3 +25,13 @@ services:
     volumes:
       - ./init_ddl.sql:/docker-entrypoint-initdb.d/init_ddl.sql
       - ./init_dml.sql:/docker-entrypoint-initdb.d/init_dml.sql
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./definitions.json:/etc/rabbitmq/definitions.json:ro
+    ports:
+        - 5672:5672
+        - 15672:15672

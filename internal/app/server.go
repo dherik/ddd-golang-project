@@ -2,19 +2,23 @@ package app
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"os"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
+	listener "github.com/dherik/ddd-golang-project/internal/app/messaging"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 type Server struct {
-	Datasource persistence.Datasource
-	HTTPPort   int
-	JWTSecret  string
+	Datasource         persistence.Datasource
+	RabbitMQDataSource rabbitmq.RabbitMQDataSource
+	HTTPPort           int
+	JWTSecret          string
 }
 
 func (s *Server) Start() {
@@ -29,11 +33,32 @@ func (s *Server) Start() {
 	userHandler := api.NewUserHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
+	rabbitMQ, err := rabbitmq.NewRabbitMQ(s.RabbitMQDataSource.ConnectionString()) //FIXME error
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer rabbitMQ.Close() //TODO test it
+
+	// Create application context
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	queueCalendar, _ := rabbitMQ.DeclareQueueAndBind(
+		"todo-service.events.calendar.birthday", "calendar", "birthday")
+
+	messageListener := listener.NewMessageListener(rabbitMQ)
+	calendarHandler := &listener.CalendarHandler{}
+
+	// Start listening to queues
+	if err := messageListener.StartListening(ctx, queueCalendar.Name, calendarHandler); err != nil {
+		log.Fatalf("Failed to start listening to order queue: %v", err)
+	}
+
 	echo := echo.New()
 	setupSlog(echo)
 
 	routes.SetupRoutes(echo)
-	echo.Logger.Fatal(echo.Start(":3333")) //FIXME port
+	echo.Logger.Fatal(echo.Start(":3333")) //FIXME read from config
 }
 
 func setupSlog(e *echo.Echo) {

@@ -2,7 +2,8 @@ package setup
 
 func SetupIntegrationTest() {
 	SetupDatabase()
-	StartServer(Datasource) //FIXME
+	SetupRabbitMQ()
+	StartServer(Datasource, RabbitMQDataSource) //FIXME
 }
 
 func StopIntegrationTest() {

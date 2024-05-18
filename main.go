@@ -1,16 +1,18 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/dherik/ddd-golang-project/internal/app"
 	"github.com/dherik/ddd-golang-project/internal/config"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
 func main() {
 
-	dataSource := persistence.Datasource{
+	pgsqlDataSource := persistence.Datasource{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     5432,         //FIXME
 		User:     "pguser",     //FIXME
@@ -20,13 +22,21 @@ func main() {
 
 	cfg, err := config.LoadConfig("config.yaml")
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to load the config: %v", err)
+	}
+
+	rabbitmqDataSource := rabbitmq.RabbitMQDataSource{
+		Host:     "localhost",
+		Port:     5672,
+		User:     "guest",
+		Password: "guest",
 	}
 
 	server := app.Server{
-		Datasource: dataSource,
-		HTTPPort:   cfg.HTTP.Port,
-		JWTSecret:  cfg.JWT.Secret,
+		RabbitMQDataSource: rabbitmqDataSource,
+		Datasource:         pgsqlDataSource,
+		HTTPPort:           cfg.HTTP.Port,
+		JWTSecret:          cfg.JWT.Secret,
 	}
 	server.Start()
 }
