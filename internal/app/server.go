@@ -39,9 +39,6 @@ func (s *Server) Start() {
 	}
 	defer rabbitMQ.Close() //TODO test it
 
-	// calendarQueue := messaging.NewCalendarQueue(rabbitMQ)
-	// calendarQueue.StartListenEvents()
-
 	// Create application context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
