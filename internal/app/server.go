@@ -61,7 +61,7 @@ func (s *Server) Start() {
 	setupSlog(echo)
 
 	routes.SetupRoutes(echo)
-	echo.Logger.Fatal(echo.Start(":3333")) //FIXME port
+	echo.Logger.Fatal(echo.Start(":3333")) //FIXME read from config
 }
 
 func setupSlog(e *echo.Echo) {
