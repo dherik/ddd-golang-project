@@ -11,8 +11,8 @@ The code still has a lot of small issues and new things to implement. You can ch
 ## How to run
 
 Prerequisites:
-- Docker
-- Go
+- [Docker](https://www.docker.com)
+- [Go](https://go.dev). I recommend to use [GVM](https://github.com/moovweb/gvm) to manage the Go versions
 
 You can run the project using:
 - Docker Compose;
@@ -86,6 +86,7 @@ Below is the extensive list of items that are implemented in the project that I 
 - Use of `gosec` to find security vulnerabilities
 - Use of Go upgrade tool to upgrade the dependencies to the latest version
 - Pull Request template to provide a baseline standard of informational quality and organizational rigor
+- Use of Local LLM ([LM Studio](https://lmstudio.ai) + [Llama 3](https://huggingface.co/meta-llama/Meta-Llama-3-8B) model) to assist the development
 
 What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 
