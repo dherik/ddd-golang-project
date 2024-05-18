@@ -24,15 +24,11 @@ func (ds *RabbitMQDataSource) ConnectionString() string {
 }
 
 type RabbitMQ struct {
-	// RabbitMQDataSource RabbitMQDataSource
 	conn    *amqp.Connection
 	channel *amqp.Channel
 }
 
 func NewRabbitMQ(url string) (*RabbitMQ, error) {
-	// return RabbitMQ{
-	// 	RabbitMQDataSource: rabbitMQDataSource,
-	// }
 
 	conn, err := amqp.Dial(url)
 	if err != nil {
@@ -49,17 +45,6 @@ func NewRabbitMQ(url string) (*RabbitMQ, error) {
 		channel: ch,
 	}, nil
 }
-
-// func (r *RabbitMQ) connect() (*amqp.Connection, error) {
-
-// 	conn, err := amqp.Dial(r.RabbitMQDataSource.ConnectionString())
-
-// 	if err != nil {
-// 		log.Fatalf("failed to connect to RabbitMQ : %v", err)
-// 		return &amqp.Connection{}, err
-// 	}
-// 	return conn, nil
-// }
 
 func (r *RabbitMQ) DeclareQueueAndBind(queueName, exchange, routingKey string) (amqp.Queue, error) {
 
