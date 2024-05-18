@@ -32,10 +32,6 @@ services:
     volumes:
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./definitions.json:/etc/rabbitmq/definitions.json:ro
-    # environment:
-      # RABBITMQ_DEFAULT_USER: "guest"
-      # RABBITMQ_DEFAULT_PASS: "guest"
-      # RABBITMQ_DEFAULT_VHOST: "/"
     ports:
         - 5672:5672
         - 15672:15672
