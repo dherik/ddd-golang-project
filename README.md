@@ -93,7 +93,7 @@ What is coming next? See the [project backlog](https://github.com/users/dherik/p
 
 ## Structure
 
-```
+```sh
 .
 ├── docker-compose.yml      # Used for development
 ├── Dockerfile
@@ -157,6 +157,10 @@ Dependencies in a DDD Service: the Application layer depends on Domain and Infra
 │ Infrastructure layer ├──────────┘
 └──────────────────────┘
 ```
+
+## AI Code assistant
+
+You can setup the AI code assistant installing the [Continue](https://www.continue.dev/) extension, the [Ollama](https://ollama.com) server and following the instructions and executing this [script](scripts/start-ollama-continue.sh).
 
 ## Technical references
 
