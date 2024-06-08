@@ -37,4 +37,34 @@ func TestNewTask(t *testing.T) {
 		}
 	})
 
+	t.Run("description is too long", func(t *testing.T) {
+		_, err := NewTask("1", "a"+string(make([]byte, 1025)))
+
+		got := err
+		want := ErrDescriptionTooLong
+
+		if got == nil {
+			t.Fatal("didn't get an error but wanted one")
+		}
+
+		if got != want {
+			t.Fatalf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("userId is invalid", func(t *testing.T) {
+		_, err := NewTask("", "some description")
+
+		got := err
+		want := ErrUserIdInvalid
+
+		if got == nil {
+			t.Fatal("didn't get an error but wanted one")
+		}
+
+		if got != want {
+			t.Fatalf("got %q, want %q", got, want)
+		}
+	})
+
 }
