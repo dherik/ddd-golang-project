@@ -43,8 +43,11 @@ func (s *Server) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	queueCalendar, _ := rabbitMQ.DeclareQueueAndBind(
+	queueCalendar, err := rabbitMQ.DeclareQueueAndBind(
 		"todo-service.events.calendar.birthday", "calendar", "birthday")
+	if err != nil {
+		log.Fatalf("Failed to declare and bind RabbitMQ queue: %v", err)
+	}
 
 	messageListener := listener.NewMessageListener(rabbitMQ)
 	calendarHandler := &listener.CalendarHandler{}

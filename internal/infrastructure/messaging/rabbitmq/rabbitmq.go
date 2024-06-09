@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
@@ -32,12 +33,12 @@ func NewRabbitMQ(url string) (*RabbitMQ, error) {
 
 	conn, err := amqp.Dial(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to RabbitMQ %s: %w", url, err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
 
 	return &RabbitMQ{
@@ -49,18 +50,17 @@ func NewRabbitMQ(url string) (*RabbitMQ, error) {
 func (r *RabbitMQ) DeclareQueueAndBind(queueName, exchange, routingKey string) (amqp.Queue, error) {
 
 	queue, err := r.DeclareQueue(queueName)
-	failOnError(err, "Failed to declare a queue") //TODO log queue name
+	if err != nil {
+		return amqp.Queue{}, fmt.Errorf("failed to declare a queue %s: %w", queueName, err)
+	}
 
 	err = r.BindQueue(queue.Name, exchange, routingKey)
-	failOnError(err, "Failed to bind a queue") //TODO log binding details
+	if err != nil {
+		return amqp.Queue{}, fmt.Errorf("failed to bind a queue %s in the exchange %s with routing key %s:  %w",
+			queueName, exchange, routingKey, err)
+	}
 
 	return queue, nil
-}
-
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Panicf("%s: %s", msg, err)
-	}
 }
 
 func (r *RabbitMQ) DeclareQueue(queueName string) (amqp.Queue, error) {
@@ -98,9 +98,9 @@ func (r *RabbitMQ) Consume(queueName string) (<-chan amqp.Delivery, error) {
 
 func (r *RabbitMQ) Close() {
 	if err := r.channel.Close(); err != nil {
-		log.Println("Error closing channel:", err) //FIXME
+		log.Panic(fmt.Errorf("failed to close channel: %w", err))
 	}
 	if err := r.conn.Close(); err != nil {
-		log.Println("Error closing connection:", err) //FIXME
+		log.Panic(fmt.Errorf("failed to close connection: %w", err))
 	}
 }
