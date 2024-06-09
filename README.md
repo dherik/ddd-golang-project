@@ -37,7 +37,7 @@ docker compose down
 
 ### With Docker Compose + Makefile
 
-Run the databaase:
+Run the database and the RabbitMQ broker:
 
 ```sh
 docker compose up postgres rabbitmq
