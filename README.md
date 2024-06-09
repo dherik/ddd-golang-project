@@ -14,7 +14,7 @@ Prerequisites:
 - [Docker](https://www.docker.com)
 - [Go](https://go.dev). I recommend to use [GVM](https://github.com/moovweb/gvm) to manage the Go versions
 
-You can run the project using:
+You can run the project using choosing on the following methods:
 - Docker Compose;
 - Using the `make` command and initializing just the database (also with Docker Compose). This method is easier to debug the application.
 
