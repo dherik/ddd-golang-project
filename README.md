@@ -87,7 +87,7 @@ Below is the extensive list of items that are implemented in the project that I 
 - Use of Go upgrade tool to upgrade the dependencies to the latest version
 - Pull Request template to provide a baseline standard of informational quality and organizational rigor
 - Use of Local LLM ([LM Studio](https://lmstudio.ai) + [Llama 3](https://huggingface.co/meta-llama/Meta-Llama-3-8B) model) to help in the initial project setup
-- Use of [Continue](https://www.continue.dev/) extension as AI code assistant, using the models [Llama 3 8B](https://ollama.com/library/llama3) for chat and [Starcoder 2 3B](https://ollama.com/library/starcoder2:3b) for code generation.
+- Use of [Continue](https://www.continue.dev/) extension as AI code assistant, using the models [Llama 3 8B](https://ollama.com/library/llama3) for chat and [Starcoder 2 3B](https://ollama.com/library/starcoder2:3b) for code generation, using [Ollama](https://ollama.com) as model server.
 
 What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
 
