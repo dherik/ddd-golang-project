@@ -26,7 +26,8 @@ func main() {
 	}
 
 	rabbitmqDataSource := rabbitmq.RabbitMQDataSource{
-		Host:     "localhost",
+		// Host:     "localhost",
+		Host:     os.Getenv("BROKER_HOST"),
 		Port:     5672,
 		User:     "guest",
 		Password: "guest",

@@ -56,7 +56,7 @@ func (r *UserSqlRepository) Add(user domain.User) (domain.User, error) {
 
 	var id int
 	err = db.QueryRow(`INSERT INTO users(username, email, password, created_at)
-		VALUES($1, $2, $3, $4) RETURNING id`, user.Username, user.Email, user.Password, user.CreatedAt).Scan(&id)
+		VALUES($1, $2, $3, $4) RETURNING id`, user.Username, user.Email, user.Password.HashPassword, user.CreatedAt).Scan(&id)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("failed to execute insert query: %w", err)
 	}
@@ -96,7 +96,7 @@ func toUserDomain(userDb User) domain.User {
 		Id:        userDb.Id,
 		Username:  userDb.Username,
 		Email:     userDb.Email,
-		Password:  userDb.Password,
+		Password:  domain.Password{HashPassword: userDb.Password},
 		CreatedAt: userDb.CreatedAt,
 	}
 	return user

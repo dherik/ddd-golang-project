@@ -1,4 +1,3 @@
-version: '3'
 services:
   app:
     container_name: app
@@ -11,8 +10,11 @@ services:
       - .:/app      # Mount the current directory into the container for development (optional)
     environment:
       - DB_HOST=postgres
-    depends_on:
-      - postgres     # Add other services your app depends on (e.g., RabbitMQ)
+      - BROKER_HOST=rabbitmq
+    restart: on-failure # Restarts the container when it crashes, waiting RabbitMQ...
+    depends_on:     # Add other services your app depends on (e.g., RabbitMQ)
+      - postgres
+      - rabbitmq
 
   postgres:
     image: postgres:16.2
@@ -33,5 +35,5 @@ services:
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./definitions.json:/etc/rabbitmq/definitions.json:ro
     ports:
-        - 5672:5672
-        - 15672:15672
+        - "5672:5672"
+        - "15672:15672"

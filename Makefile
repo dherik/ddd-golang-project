@@ -48,6 +48,6 @@ clean:
 	rm -f $(BINARY_NAME)
 
 run: build
-	DB_HOST=127.0.0.1 ./$(BINARY_NAME)
+	DB_HOST=127.0.0.1 BROKER_HOST=127.0.0.1 ./$(BINARY_NAME)
 
 .PHONY: build test clean

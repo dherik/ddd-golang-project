@@ -94,7 +94,7 @@ func (s *UserService) login(username, password string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to login: %w", err)
 	}
-	authorized := user.CheckPasswordHash(password)
+	authorized := user.Password.CheckPasswordHash(password)
 	return authorized, nil
 }
 
