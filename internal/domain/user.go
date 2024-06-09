@@ -57,7 +57,7 @@ func NewUser(username, email, plainPassword string) (User, error) {
 		return User{}, fmt.Errorf("failed creating the password: %w", err)
 	}
 
-	password.hashPassword() // hash the password
+	password.hashPassword()
 	user.Password = password
 
 	return user, nil
