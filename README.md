@@ -160,7 +160,7 @@ Dependencies in a DDD Service: the Application layer depends on Domain and Infra
 
 ## AI Code assistant
 
-You can setup the AI code assistant installing the [Continue](https://www.continue.dev/) extension, the [Ollama](https://ollama.com) server and following the instructions and executing this [script](scripts/start-ollama-continue.sh).
+You can setup the AI code assistant installing the [Continue](https://www.continue.dev/) extension, the [Ollama](https://ollama.com) server and following the instructions and executing this [README.md](scripts/README.md) file.
 
 ## Technical references
 
