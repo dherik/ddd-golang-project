@@ -29,7 +29,7 @@ func (s *TaskTestSuite) TestGetByDate() {
 	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 
 	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
-	slog.Info(fmt.Sprintf("Url: %s", url))
+	slog.Info("request url", "url", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil) //TODO duplicated port, get from s.port (parametrized)
 	s.NoError(err)
 
@@ -110,6 +110,7 @@ func (s *TaskTestSuite) TestAddTask() {
 }
 
 func addTask(s *TaskTestSuite, payload api.TaskRequest, token string) *http.Response {
+	s.T().Helper()
 	requestBody, err := json.Marshal(payload)
 	if err != nil {
 		s.T().Fatalf("Error encoding JSON: %v", err)

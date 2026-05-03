@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -12,17 +11,11 @@ import (
 )
 
 type LoginHandler struct {
-	UserService UserService
+	UserService *UserService
 	JWTSecret   string
 }
 
-// Credentials struct to represent the JSON request body
-type Credentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-func NewLoginHandler(userService UserService, jwtSecret string) LoginHandler {
+func NewLoginHandler(userService *UserService, jwtSecret string) LoginHandler {
 	return LoginHandler{
 		UserService: userService,
 		JWTSecret:   jwtSecret,
@@ -30,10 +23,8 @@ func NewLoginHandler(userService UserService, jwtSecret string) LoginHandler {
 }
 
 func (h *LoginHandler) login(c echo.Context) error {
-
 	creds := new(Credentials)
 
-	// Bind the request body to the Credentials struct
 	if err := c.Bind(creds); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -42,37 +33,31 @@ func (h *LoginHandler) login(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "username or password is empty")
 	}
 
-	username := creds.Username
-	password := creds.Password
-
-	authorized, err := h.UserService.login(username, password)
+	authorized, err := h.UserService.login(creds.Username, creds.Password)
 	if err != nil {
 		if errors.Is(err, persistence.ErrUserNotFound) {
 			return echo.NewHTTPError(http.StatusUnauthorized, "user not found")
 		}
-		return fmt.Errorf("failed login for user '%s': %w", username, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to login")
 	}
 	if !authorized {
 		return echo.ErrUnauthorized
 	}
 
-	// Set custom claims
 	expirationTime := time.Now().Add(time.Hour * 72)
 	claims := &jwtCustomClaims{
-		username, //FIXME get user's name
-		username, //FIXME get user's email
+		creds.Username, //FIXME get user's name
+		creds.Username, //FIXME get user's email
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
 	}
 
-	// Create token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// Generate encoded token and send it as response.
 	tokenString, err := token.SignedString([]byte(h.JWTSecret))
 	if err != nil {
-		return fmt.Errorf("failed generating encoded token: %w", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate token")
 	}
 
 	loginResponse := LoginResponse{
@@ -81,6 +66,11 @@ func (h *LoginHandler) login(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, loginResponse)
+}
+
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type LoginResponse struct {

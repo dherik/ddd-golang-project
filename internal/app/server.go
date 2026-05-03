@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -23,12 +24,15 @@ type Server struct {
 
 func (s *Server) Start() {
 
-	pgsql := persistence.NewPostgreRepository(s.Datasource)
+	pgsql, err := persistence.NewPostgreRepository(s.Datasource)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 	taskRepository := persistence.NewTaskRepository(pgsql)
 	userRepository := persistence.NewUserRepository(pgsql)
 	taskService := api.NewTaskService(taskRepository)
 	userService := api.NewUserService(userRepository)
-	taskHandler := api.NewTaskHandler(*taskService)
+	taskHandler := api.NewTaskHandler(taskService)
 	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
 	userHandler := api.NewUserHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
@@ -61,7 +65,7 @@ func (s *Server) Start() {
 	setupSlog(echo)
 
 	routes.SetupRoutes(echo)
-	echo.Logger.Fatal(echo.Start(":3333")) //FIXME read from config
+	echo.Logger.Fatal(echo.Start(fmt.Sprintf(":%d", s.HTTPPort)))
 }
 
 func setupSlog(e *echo.Echo) {

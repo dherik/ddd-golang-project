@@ -20,23 +20,19 @@ type User struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
-func NewUserRepository(postgreRepository PostgreRepository) domain.UserRepository {
+func NewUserRepository(postgreRepository *PostgreRepository) domain.UserRepository {
 	return &UserSqlRepository{pgsql: postgreRepository}
 }
 
 type UserSqlRepository struct {
-	pgsql PostgreRepository
+	pgsql *PostgreRepository
 }
 
 func (r *UserSqlRepository) GetByID(id int) (domain.User, error) {
-	db, err := r.pgsql.connect()
-	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
+	db := r.pgsql.connect()
 
 	var user User
-	err = db.QueryRow(`SELECT id, username, email, password, created_at FROM user 
+	err := db.QueryRow(`SELECT id, username, email, password, created_at FROM users 
 		where id = $1`, id).Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt)
 
 	if err != nil {
@@ -48,14 +44,10 @@ func (r *UserSqlRepository) GetByID(id int) (domain.User, error) {
 
 // Add implements domain.UserRepository.
 func (r *UserSqlRepository) Add(user domain.User) (domain.User, error) {
-	db, err := r.pgsql.connect()
-	if err != nil {
-		return domain.User{}, fmt.Errorf("failed connecting to database: %w", err)
-	}
-	defer db.Close()
+	db := r.pgsql.connect()
 
 	var id int
-	err = db.QueryRow(`INSERT INTO users(username, email, password, created_at)
+	err := db.QueryRow(`INSERT INTO users(username, email, password, created_at)
 		VALUES($1, $2, $3, $4) RETURNING id`, user.Username, user.Email, user.Password.HashPassword, user.CreatedAt).Scan(&id)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("failed to execute insert query: %w", err)
@@ -63,24 +55,20 @@ func (r *UserSqlRepository) Add(user domain.User) (domain.User, error) {
 
 	userNew, err := r.GetByID(id)
 	if err != nil {
-		return domain.User{}, nil
+		return domain.User{}, fmt.Errorf("failed to retrieve created user: %w", err)
 	}
 	return userNew, nil
 }
 
 func (r *UserSqlRepository) FindUserByUsername(username string) (domain.User, error) {
-	db, err := r.pgsql.connect()
-	if err != nil {
-		return domain.User{}, fmt.Errorf("failed connecting to database: %w", err)
-	}
-	defer db.Close()
+	db := r.pgsql.connect()
 
 	var user User
-	err = db.QueryRow(`SELECT id, username, email, password, created_at FROM users 
+	err := db.QueryRow(`SELECT id, username, email, password, created_at FROM users 
 		where username = $1`, username).Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt)
 
 	if err == sql.ErrNoRows {
-		slog.Error(fmt.Sprintf("user '%s' was not found: %s", username, err.Error()))
+		slog.Error("user not found", "username", username)
 		return domain.User{}, ErrUserNotFound
 	}
 
@@ -92,12 +80,11 @@ func (r *UserSqlRepository) FindUserByUsername(username string) (domain.User, er
 }
 
 func toUserDomain(userDb User) domain.User {
-	user := domain.User{
+	return domain.User{
 		Id:        userDb.Id,
 		Username:  userDb.Username,
 		Email:     userDb.Email,
 		Password:  domain.Password{HashPassword: userDb.Password},
 		CreatedAt: userDb.CreatedAt,
 	}
-	return user
 }

@@ -2,8 +2,7 @@
 	"recommendations": [
 		"ms-azuretools.vscode-docker",
 		"golang.go",
-		"ms-vscode.makefile-tools",
-		"Continue.continue"
+		"ms-vscode.makefile-tools"
 	],
 	"unwantedRecommendations": [
 		

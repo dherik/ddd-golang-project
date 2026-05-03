@@ -51,7 +51,13 @@ make build run
 
 ### How to run the tests
 
-To run the integration tests:
+To run the unit tests:
+
+```sh
+make unit-test
+```
+
+To run the integration tests (requires Docker):
 
 ```sh
 make integration-test
@@ -83,7 +89,7 @@ Below is the extensive list of items that are implemented in the project that I 
 - Use of short names for Go packages
 - Use of dependency injection pattern
 - Domain models totally independent from other layers, not using domain objects on persistence (database) or application (API) layers.
-- Use of `gosec` to find security vulnerabilities
+- Use of `govulncheck` to find security vulnerabilities
 - Use of Go upgrade tool to upgrade the dependencies to the latest version
 - Pull Request template to provide a baseline standard of informational quality and organizational rigor
 - Use of Local LLM ([LM Studio](https://lmstudio.ai) + [Llama 3](https://huggingface.co/meta-llama/Meta-Llama-3-8B) model) to help in the initial project setup
@@ -95,51 +101,69 @@ What is coming next? See the [project backlog](https://github.com/users/dherik/p
 
 ```sh
 .
+├── config.yaml             # Application configuration
 ├── docker-compose.yml      # Used for development
 ├── Dockerfile
 ├── docs                    # General documentation
 │   └── bruno               # Bruno collections ready to import and use
-│       └── DDD Example
-│           ├── bruno.json
-│           ├── Create task.bru
-│           ├── environments
-│           │   └── Local.bru
-│           ├── Find task.bru
-│           ├── Find task by id.bru
-│           └── Login.bru
-├── init_ddl.sql            # DDL (SQL to create tables, FKs, etc) for the database
-├── init_dml.sql            # DML (SQL data) for database
+│       ├── bruno.json
+│       ├── Create task.bru
+│       ├── Create user.bru
+│       ├── Find task.bru
+│       ├── Find task by id.bru
+│       ├── Login.bru
+│       └── environments
+│           └── Local.bru
+├── init_ddl.sql            # DDL (SQL to create tables, FKs, etc)
+├── init_dml.sql            # DML (seed data) for database
 ├── internal
-│   ├── app                 # Application layer (DDD)
-│   │   ├── api             # API code
-│   │   │   ├── login.go
-│   │   │   ├── routes.go   # All routing (endpoints) code 
-│   │   │   ├── service.go
-│   │   │   └── task.go
-│   │   └── server.go
-│   ├── domain              # Domain layer (DDD)
-│   │   ├── task.go
-│   │   ├── user.go
-│   │   └── user_test.go
-│   └── infrastructure      # Infrastructure layer (DDD)
-│       └── persistence     # Persistence code
-│           ├── postgresql.go
-│           ├── task.go     # Implementation of the task repository
-│           └── user.go     # Implementation of the user repository
-├── main
+│   ├── app                 # Application layer (DDD)
+│   │   ├── api             # API handlers, services, and routes
+│   │   │   ├── login.go
+│   │   │   ├── routes.go
+│   │   │   ├── service.go
+│   │   │   ├── task.go
+│   │   │   └── user.go
+│   │   ├── messaging       # Message listeners and handlers
+│   │   │   ├── handlers.go
+│   │   │   └── listener.go
+│   │   └── server.go
+│   ├── config              # Configuration loader
+│   │   └── config.go
+│   ├── domain              # Domain layer (DDD)
+│   │   ├── password.go
+│   │   ├── password_test.go
+│   │   ├── task.go
+│   │   ├── task_test.go
+│   │   ├── user.go
+│   │   └── user_test.go
+│   └── infrastructure      # Infrastructure layer (DDD)
+│       ├── external
+│       │   └── weatherapi.go
+│       ├── messaging
+│       │   └── rabbitmq
+│       │       └── rabbitmq.go
+│       └── persistence
+│           ├── postgresql.go
+│           ├── task.go
+│           └── user.go
 ├── main.go
 ├── Makefile
 ├── README.md
+├── scripts
+│   └── start-ollama-continue.sh
 └── tests
-    └── integration             # Integration tests code 
-        ├── setup               # Code used to setup the integration tests
-        │   ├── database.go     # Code for database initilization for integration tests
-        │   ├── login.go        
-        │   ├── setup.go        # Common code for integration tests setup
-        │   └── server.go       # Code for HTTP server initialization for integration tests
-        ├── task_test.go        # Integration tests for task
-        └── user_test.go        # Integration tests for user
-
+    └── integration
+        ├── integration_test.go
+        ├── setup
+        │   ├── broker.go
+        │   ├── broker_command.go
+        │   ├── database.go
+        │   ├── login.go
+        │   ├── server.go
+        │   └── setup.go
+        ├── task_test.go
+        └── user_test.go
 ```
 
 With this structure, you maintain a clear separation of concerns between domain logic, application services, and infrastructure code. You can apply DDD principles to your domain entities, services, and repositories while keeping your codebase organized and easy to understand.

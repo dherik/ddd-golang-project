@@ -13,35 +13,26 @@ import (
 )
 
 var (
-	initializedServer     bool
-	initializedServerLock sync.Mutex
+	setupServerOnce sync.Once
 )
 
 func StartServer(dataSource persistence.Datasource, rabbitMQDataSource rabbitmq.RabbitMQDataSource) {
+	setupServerOnce.Do(func() {
+		slog.Info("Initializing the HTTP server...")
 
-	initializedServerLock.Lock()
-	defer initializedServerLock.Unlock()
+		server := app.Server{
+			Datasource:         dataSource,
+			RabbitMQDataSource: rabbitMQDataSource,
+			HTTPPort:           3333,
+		}
 
-	if initializedServer {
-		slog.Debug("Server it's already initialized")
-		return
-	}
-
-	slog.Info("Initializing the HTTP server...")
-
-	server := app.Server{
-		Datasource:         dataSource,
-		RabbitMQDataSource: rabbitMQDataSource,
-	}
-
-	go server.Start()
-	err := waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond) //FIXME host and port
-	if err != nil {
-		slog.Error(fmt.Sprintf("failed waiting HTTP server to start: %s", err.Error()))
-		return
-	}
-
-	initializedServer = true
+		go server.Start()
+		err := waitServiceStart("http://localhost:3333", 20, 100*time.Millisecond)
+		if err != nil {
+			slog.Error("failed waiting HTTP server to start", "err", err)
+			return
+		}
+	})
 }
 
 func waitServiceStart(url string, maxRetries int, retryInterval time.Duration) error {
@@ -54,8 +45,7 @@ func waitServiceStart(url string, maxRetries int, retryInterval time.Duration) e
 			return nil
 		}
 
-		// Print an error message (optional)
-		slog.Info(fmt.Sprintf("Attempt %d: Service is not healthy yet. Retrying in %s...\n", i+1, retryInterval))
+		slog.Info("service not healthy yet, retrying", "attempt", i+1, "retryInterval", retryInterval)
 
 		// Wait for the specified interval before retrying
 		time.Sleep(retryInterval)

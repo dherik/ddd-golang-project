@@ -38,5 +38,6 @@ func main() {
 		HTTPPort:           cfg.HTTP.Port,
 		JWTSecret:          cfg.JWT.Secret,
 	}
+
 	server.Start()
 }

@@ -62,7 +62,9 @@ func TestValidPassword(t *testing.T) {
 	t.Run("check password is valid", func(t *testing.T) {
 
 		password := Password{PlainPassword: "some_password"}
-		_ = password.hashPassword()
+		if err := password.hashPassword(); err != nil {
+			t.Fatalf("failed to hash password: %v", err)
+		}
 
 		got := password.CheckPasswordHash("some_password")
 		want := true
@@ -75,7 +77,9 @@ func TestValidPassword(t *testing.T) {
 	t.Run("check password is not valid", func(t *testing.T) {
 
 		password := Password{PlainPassword: "some_password"}
-		password.hashPassword()
+		if err := password.hashPassword(); err != nil {
+			t.Fatalf("failed to hash password: %v", err)
+		}
 
 		got := password.CheckPasswordHash("another_password")
 		want := false

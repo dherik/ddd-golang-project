@@ -21,8 +21,7 @@ import (
 )
 
 var (
-	initialized       bool
-	initializedLock   sync.Mutex
+	setupDBOnce       sync.Once
 	PostgresContainer *postgres.PostgresContainer
 	Datasource        persistence.Datasource
 	Ctx               context.Context
@@ -35,66 +34,57 @@ type DatabaseIT struct {
 }
 
 func SetupDatabase() {
+	setupDBOnce.Do(func() {
+		slog.Info("Initializing the database...")
 
-	initializedLock.Lock()
-	defer initializedLock.Unlock()
+		datasource := persistence.Datasource{
+			User:     "test_user",
+			Password: "test_password",
+			Name:     "test_db",
+		}
 
-	if initialized {
-		slog.Debug("Database it's already initialized")
-		return
-	}
+		slog.Info("Starting docker")
 
-	slog.Info("Initializing the database...")
+		ctx := context.Background()
+		postgresContainer, err := postgres.RunContainer(ctx,
+			testcontainers.WithImage("docker.io/postgres:16.2-alpine"),
+			// postgres.WithInitScripts(filepath.Join("testdata", "init-user-db.sh")),
+			// postgres.WithConfigFile(filepath.Join("testdata", "my-postgres.conf")),
+			postgres.WithDatabase("test_db"),
+			postgres.WithUsername("test_user"),
+			postgres.WithPassword("test_password"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").
+					WithOccurrence(2).
+					WithStartupTimeout(5*time.Second)),
+		)
+		if err != nil {
+			log.Fatalf("failed to start container: %s", err)
+		}
 
-	datasource := persistence.Datasource{
-		User:     "test_user",
-		Password: "test_password",
-		Name:     "test_db",
-	}
+		//FIXME it's ugly
+		host, _ := postgresContainer.Host(ctx)
+		datasource.Host = host
+		portNat, _ := postgresContainer.MappedPort(ctx, "5432")
+		port, _ := strconv.Atoi(portNat.Port())
+		datasource.Port = port
+		databaseUrl, _ := postgresContainer.ConnectionString(ctx, "sslmode=disable")
 
-	slog.Info("Starting docker")
+		slog.Info(fmt.Sprintf("Connecting to database on url: %s", databaseUrl))
 
-	ctx := context.Background()
-	postgresContainer, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("docker.io/postgres:16.2-alpine"),
-		// postgres.WithInitScripts(filepath.Join("testdata", "init-user-db.sh")),
-		// postgres.WithConfigFile(filepath.Join("testdata", "my-postgres.conf")),
-		postgres.WithDatabase("test_db"),
-		postgres.WithUsername("test_user"),
-		postgres.WithPassword("test_password"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(5*time.Second)),
-	)
-	if err != nil {
-		log.Fatalf("failed to start container: %s", err)
-	}
+		db, err = sql.Open("postgres", databaseUrl)
+		if err != nil {
+			log.Fatalf("Could not open SQL connection: %s", err)
+		}
 
-	//FIXME it's ugly
-	host, _ := postgresContainer.Host(ctx)
-	datasource.Host = host
-	portNat, _ := postgresContainer.MappedPort(ctx, "5432")
-	port, _ := strconv.Atoi(portNat.Port())
-	datasource.Port = port
-	databaseUrl, _ := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+		slog.Info("Database for integration tests is up and running!")
 
-	slog.Info(fmt.Sprintf("Connecting to database on url: %s", databaseUrl))
+		LoadDDL()
 
-	db, err = sql.Open("postgres", databaseUrl)
-	if err != nil {
-		log.Fatalf("Could not open SQL connection: %s", err)
-	}
-
-	slog.Info("Database for integration tests is up and running!")
-
-	LoadDDL()
-
-	PostgresContainer = postgresContainer
-	Ctx = ctx
-	Datasource = datasource
-
-	initialized = true
+		PostgresContainer = postgresContainer
+		Ctx = ctx
+		Datasource = datasource
+	})
 }
 
 func LoadDDL() {

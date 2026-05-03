@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 	"unicode"
 )
@@ -57,21 +58,17 @@ func NewUser(username, email, plainPassword string) (User, error) {
 		return User{}, fmt.Errorf("failed creating the password: %w", err)
 	}
 
-	password.hashPassword()
+	if err = password.hashPassword(); err != nil {
+		return User{}, fmt.Errorf("failed hashing the password: %w", err)
+	}
+
 	user.Password = password
 
 	return user, nil
 }
 
-func hasSpecialCharacter(password string) bool {
-	specialChar := false
-	for _, char := range password {
-		switch char {
-		case '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '-', '=':
-			specialChar = true
-		}
-	}
-	return specialChar
+func hasSpecialCharacter(s string) bool {
+	return strings.ContainsAny(s, "!@#$%^&*()_+-=")
 }
 
 func containsNumber(s string) bool {

@@ -38,7 +38,7 @@ func (p *Password) Validate() error {
 func (p *Password) CheckPasswordHash(plainPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(p.HashPassword), []byte(plainPassword))
 	if err != nil {
-		slog.Error("failed comparing hash and password: %w", err)
+		slog.Error("failed comparing hash and password", "err", err)
 	}
 	return err == nil
 }

@@ -96,6 +96,7 @@ func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
 // }
 
 func addUser(t *testing.T, payload api.UserRequest, token string) *http.Response {
+	t.Helper()
 	requestBody, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("Error encoding JSON: %v", err)

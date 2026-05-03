@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -97,7 +96,7 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 
 	if he, ok := err.(*echo.HTTPError); ok {
 		code = he.Code
-		message = fmt.Sprintf("%v", he.Message)
+		message = he.Message.(string)
 	}
 
 	// Create a custom error response
@@ -112,7 +111,7 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 	// Send the custom error response
 	err = c.JSON(code, errorResponse)
 	if err != nil {
-		slog.Error(fmt.Sprint("failed sending custom error response: %w", err))
+		slog.Error("failed sending custom error response", "err", err)
 	}
 }
 
