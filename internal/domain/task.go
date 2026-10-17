@@ -42,8 +42,21 @@ func NewTask(userId string, description string) (Task, error) {
 	}, nil
 }
 
+type TaskQuery struct {
+	UserId    string
+	StartDate time.Time
+	EndDate   time.Time
+	Limit     int
+	Offset    int
+}
+
+type TaskPage struct {
+	Tasks   []Task
+	HasMore bool
+}
+
 type TaskRepository interface {
 	GetByIDAndUserID(id int, userId string) (Task, error)
 	AddTaskToUser(userId string, task Task) (Task, error)
-	FindTasks(userId string, startDate time.Time, endDate time.Time) ([]Task, error)
+	FindTasks(query TaskQuery) (TaskPage, error)
 }

@@ -42,14 +42,17 @@ func (s *TaskTestSuite) TestGetByDate() {
 	byteBody, err := io.ReadAll(response.Body)
 	s.NoError(err)
 
-	require.JSONEq(s.T(), `[
-		{
-		  "id": 1,
-		  "description": "Complete project proposal",
-		  "userId": "1",
-		  "createdAt": "2024-02-15T10:59:01.054Z"
-		}
-	  ]`, string(byteBody))
+	require.JSONEq(s.T(), `{
+		"items": [
+			{
+			  "id": 1,
+			  "description": "Complete project proposal",
+			  "userId": "1",
+			  "createdAt": "2024-02-15T10:59:01.054Z"
+			}
+		],
+		"hasMore": false
+	  }`, string(byteBody))
 
 	response.Body.Close()
 }
@@ -218,14 +221,17 @@ func (s *TaskTestSuite) TestUserOnlySeesOwnTasks() {
 	s.NoError(err)
 	listResponse.Body.Close()
 
-	require.JSONEq(s.T(), `[
-		{
-		  "id": 2,
-		  "description": "Review code for bug fixes",
-		  "userId": "2",
-		  "createdAt": "2024-02-16T21:23:09.066Z"
-		}
-	  ]`, string(listBody))
+	require.JSONEq(s.T(), `{
+		"items": [
+			{
+			  "id": 2,
+			  "description": "Review code for bug fixes",
+			  "userId": "2",
+			  "createdAt": "2024-02-16T21:23:09.066Z"
+			}
+		],
+		"hasMore": false
+	  }`, string(listBody))
 }
 
 func (s *TaskTestSuite) TestCreateTaskIgnoresUserIdFromBody() {
@@ -257,11 +263,11 @@ func (s *TaskTestSuite) TestCreateTaskIgnoresUserIdFromBody() {
 	s.NoError(err)
 	listResponse.Body.Close()
 
-	var tasks []api.TaskResponse
-	s.NoError(json.Unmarshal(listBody, &tasks))
+	var page api.TasksResponse
+	s.NoError(json.Unmarshal(listBody, &page))
 
 	found := false
-	for _, task := range tasks {
+	for _, task := range page.Items {
 		if task.Description == "Owned by admin" {
 			found = true
 			s.Equal("1", task.UserId)

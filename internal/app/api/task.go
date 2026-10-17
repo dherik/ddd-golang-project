@@ -15,6 +15,11 @@ type TaskHandler struct {
 	TaskService *TaskService
 }
 
+const (
+	defaultTaskPageSize = 20
+	maxTaskPageSize     = 100
+)
+
 func NewTaskHandler(taskService *TaskService) TaskHandler {
 	return TaskHandler{
 		TaskService: taskService,
@@ -37,7 +42,22 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid end date")
 	}
-	tasks, err := h.TaskService.FindTasks(userId, startDate, endDate)
+	limit, ok := parseTaskPageSize(c.QueryParam("limit"))
+	if !ok {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid limit")
+	}
+	offset, ok := parseTaskPageOffset(c.QueryParam("offset"))
+	if !ok {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid offset")
+	}
+	query := domain.TaskQuery{
+		UserId:    userId,
+		StartDate: startDate,
+		EndDate:   endDate,
+		Limit:     limit,
+		Offset:    offset,
+	}
+	tasks, err := h.TaskService.FindTasks(query)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed finding tasks")
 	}
@@ -92,4 +112,26 @@ func (h *TaskHandler) createTask(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusCreated)
+}
+
+func parseTaskPageSize(raw string) (int, bool) {
+	if raw == "" {
+		return defaultTaskPageSize, true
+	}
+	limit, err := strconv.Atoi(raw)
+	if err != nil || limit < 1 || limit > maxTaskPageSize {
+		return 0, false
+	}
+	return limit, true
+}
+
+func parseTaskPageOffset(raw string) (int, bool) {
+	if raw == "" {
+		return 0, true
+	}
+	offset, err := strconv.Atoi(raw)
+	if err != nil || offset < 0 {
+		return 0, false
+	}
+	return offset, true
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
@@ -31,13 +30,13 @@ func (s *TaskService) AddTaskToUser(task domain.Task) error {
 	return nil
 }
 
-func (s *TaskService) FindTasks(userId string, startDate time.Time, endDate time.Time) ([]TaskResponse, error) {
-	slog.Info("find tasks between dates", "userId", userId, "startDate", startDate, "endDate", endDate)
-	tasks, err := s.taskRepository.FindTasks(userId, startDate, endDate)
+func (s *TaskService) FindTasks(query domain.TaskQuery) (TasksResponse, error) {
+	slog.Info("find tasks between dates", "userId", query.UserId, "startDate", query.StartDate, "endDate", query.EndDate)
+	page, err := s.taskRepository.FindTasks(query)
 	if err != nil {
-		return []TaskResponse{}, fmt.Errorf("failed finding tasks: %w", err)
+		return TasksResponse{}, fmt.Errorf("failed finding tasks: %w", err)
 	}
-	return toResponseArray(tasks), nil
+	return TasksResponse{Items: toResponseArray(page.Tasks), HasMore: page.HasMore}, nil
 }
 
 func (s *TaskService) GetTaskByID(userId string, id int) (TaskResponse, error) {

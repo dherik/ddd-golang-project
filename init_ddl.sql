@@ -36,3 +36,4 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_task_user_id ON task (user_id);
 CREATE INDEX IF NOT EXISTS idx_task_created_at ON task (created_at);
+CREATE INDEX IF NOT EXISTS idx_task_user_created_id ON task (user_id, created_at DESC, id DESC);

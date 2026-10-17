@@ -42,13 +42,15 @@ func toTaskDomain(taskDb Task) domain.Task {
 	}
 }
 
-func (r *TaskSqlRepository) FindTasks(userId string, startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
 	db := r.pgsql.connect()
 
 	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task
-		where user_id = $1 AND created_at >= $2 AND created_at <= $3`, userId, startDate, endDate)
+		where user_id = $1 AND created_at >= $2 AND created_at <= $3
+		ORDER BY created_at DESC, id DESC
+		LIMIT $4 OFFSET $5`, query.UserId, query.StartDate, query.EndDate, query.Limit+1, query.Offset)
 	if err != nil {
-		return []domain.Task{}, fmt.Errorf("failed to execute query: %w", err)
+		return domain.TaskPage{}, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
@@ -57,15 +59,20 @@ func (r *TaskSqlRepository) FindTasks(userId string, startDate time.Time, endDat
 		var task Task
 		err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
 		if err != nil {
-			return []domain.Task{}, fmt.Errorf("failed scanning row: %w", err)
+			return domain.TaskPage{}, fmt.Errorf("failed scanning row: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
 	if err := rows.Err(); err != nil {
-		return []domain.Task{}, fmt.Errorf("failed iterating rows: %w", err)
+		return domain.TaskPage{}, fmt.Errorf("failed iterating rows: %w", err)
 	}
 
-	return toTaskDomainList(tasks), nil
+	hasMore := len(tasks) > query.Limit
+	if hasMore {
+		tasks = tasks[:query.Limit]
+	}
+
+	return domain.TaskPage{Tasks: toTaskDomainList(tasks), HasMore: hasMore}, nil
 }
 
 func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {

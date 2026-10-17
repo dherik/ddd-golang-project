@@ -29,8 +29,16 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	now := time.Now().UTC()
 
 	mockRepo := new(mockTaskRepository)
-	mockRepo.On("FindTasks", "1", start, end).Return([]domain.Task{
-		{Id: 1, UserId: "1", Description: "Task 1", CreatedAt: now},
+	mockRepo.On("FindTasks", domain.TaskQuery{
+		UserId:    "1",
+		StartDate: start,
+		EndDate:   end,
+		Limit:     20,
+	}).Return(domain.TaskPage{
+		Tasks: []domain.Task{
+			{Id: 1, UserId: "1", Description: "Task 1", CreatedAt: now},
+		},
+		HasMore: false,
 	}, nil)
 
 	svc := NewTaskService(mockRepo)
@@ -45,12 +53,13 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var tasks []TaskResponse
-	err = json.Unmarshal(rec.Body.Bytes(), &tasks)
+	var page TasksResponse
+	err = json.Unmarshal(rec.Body.Bytes(), &page)
 	require.NoError(t, err)
-	assert.Len(t, tasks, 1)
-	assert.Equal(t, 1, tasks[0].Id)
-	assert.Equal(t, "Task 1", tasks[0].Description)
+	assert.Len(t, page.Items, 1)
+	assert.False(t, page.HasMore)
+	assert.Equal(t, 1, page.Items[0].Id)
+	assert.Equal(t, "Task 1", page.Items[0].Description)
 
 	mockRepo.AssertExpectations(t)
 }

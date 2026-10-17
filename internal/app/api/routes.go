@@ -22,6 +22,11 @@ type TaskRequest struct {
 	Description string `json:"description"`
 }
 
+type TasksResponse struct {
+	Items   []TaskResponse `json:"items"`
+	HasMore bool           `json:"hasMore"`
+}
+
 type UserRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -91,6 +96,10 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 }
 
 func customHTTPErrorHandler(err error, c echo.Context) {
+	if c.Response().Committed {
+		return
+	}
+
 	code := http.StatusInternalServerError
 	message := "Internal Server Error"
 

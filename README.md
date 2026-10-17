@@ -225,12 +225,38 @@ TOKEN=$(curl -s -X POST http://localhost:3333/login \
 |---|---|---|---|
 | `POST` | `/login` | Public | Exchanges credentials for a JWT. |
 | `POST` | `/users` | JWT | Creates a user. Returns `409` for duplicate username or email. |
-| `GET` | `/tasks` | JWT | Lists the authenticated user's tasks. Requires `startDate` and `endDate` query parameters in RFC 3339 format. |
+| `GET` | `/tasks` | JWT | Lists the authenticated user's tasks, newest first, one page at a time. Requires `startDate` and `endDate` query parameters in RFC 3339 format. Supports `limit` (default `20`, maximum `100`) and `offset` (default `0`). |
 | `GET` | `/tasks/:id` | JWT | Returns one task owned by the authenticated user, or `404`. |
 | `POST` | `/tasks` | JWT | Creates a task for the authenticated user. The owner always comes from the token; the body only needs a `description`. |
 | `GET` | `/api/health` | Public | Liveness endpoint. |
 
 Task ownership is enforced in the persistence layer: a user can never read or create tasks for another user. Asking for someone else's task returns `404`, so task IDs are not leaked.
+
+### Pagination
+
+`GET /tasks` returns one page at a time:
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "description": "Complete project proposal",
+      "userId": "1",
+      "createdAt": "2024-02-15T10:59:01.054Z"
+    }
+  ],
+  "hasMore": false
+}
+```
+
+- `items` is always an array, ordered newest first by `createdAt` and then by descending `id`.
+- `hasMore` is `true` only when at least one task exists beyond the returned page.
+- `limit` defaults to `20` and accepts `1` to `100`. A value outside that range returns `400`; it is never clamped.
+- `offset` defaults to `0` and accepts any non-negative integer. An offset past the end returns an empty page with `hasMore: false`.
+- There is no total count and no page number.
+
+Pagination is offset-based. A task created between page requests shifts later rows down, so the last task of one page can reappear at the top of the next. To freeze a walk, send the `createdAt` of the first page's newest task as `endDate` on every subsequent request.
 
 ### Examples
 
@@ -241,8 +267,8 @@ curl -s -X POST http://localhost:3333/tasks \
   -H 'Content-Type: application/json' \
   -d '{"description":"Write the README"}'
 
-# Find tasks in a date range (RFC 3339)
-curl -s "http://localhost:3333/tasks?startDate=2024-02-10T00:00:00Z&endDate=2024-02-25T23:59:59Z" \
+# Find one page of tasks in a date range (RFC 3339)
+curl -s "http://localhost:3333/tasks?startDate=2024-02-10T00:00:00Z&endDate=2024-02-25T23:59:59Z&limit=20&offset=0" \
   -H "Authorization: Bearer $TOKEN"
 
 # Find a task by ID
@@ -337,7 +363,7 @@ The DDD design and the integration testing setup are the two areas this project 
 These are intentional next steps rather than surprises:
 
 - No refresh tokens or logout endpoint.
-- No pagination on `GET /tasks`; the date range is currently required.
+- The date range on `GET /tasks` is currently required.
 - No rate limiting, body size limit, or configurable HTTP server timeouts yet.
 - Integration tests currently use a fixed port (`3333`) and stop only the database container on teardown.
 

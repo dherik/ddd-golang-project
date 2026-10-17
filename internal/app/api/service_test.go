@@ -24,42 +24,45 @@ func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) (dom
 	return args.Get(0).(domain.Task), args.Error(1)
 }
 
-func (m *mockTaskRepository) FindTasks(userId string, startDate time.Time, endDate time.Time) ([]domain.Task, error) {
-	args := m.Called(userId, startDate, endDate)
-	return args.Get(0).([]domain.Task), args.Error(1)
+func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
+	args := m.Called(query)
+	return args.Get(0).(domain.TaskPage), args.Error(1)
 }
 
 func TestTaskService_FindTasks(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	query := domain.TaskQuery{UserId: "1", StartDate: start, EndDate: end, Limit: 20}
 
 	expectedTasks := []domain.Task{
 		{Id: 1, UserId: "1", Description: "Task 1", CreatedAt: time.Now().UTC()},
 	}
 
 	mockRepo := new(mockTaskRepository)
-	mockRepo.On("FindTasks", "1", start, end).Return(expectedTasks, nil)
+	mockRepo.On("FindTasks", query).Return(domain.TaskPage{Tasks: expectedTasks, HasMore: false}, nil)
 
 	svc := NewTaskService(mockRepo)
-	tasks, err := svc.FindTasks("1", start, end)
+	page, err := svc.FindTasks(query)
 
 	require.NoError(t, err)
-	assert.Len(t, tasks, 1)
-	assert.Equal(t, 1, tasks[0].Id)
-	assert.Equal(t, "Task 1", tasks[0].Description)
-	assert.Equal(t, "1", tasks[0].UserId)
+	assert.Len(t, page.Items, 1)
+	assert.False(t, page.HasMore)
+	assert.Equal(t, 1, page.Items[0].Id)
+	assert.Equal(t, "Task 1", page.Items[0].Description)
+	assert.Equal(t, "1", page.Items[0].UserId)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestTaskService_FindTasks_RepositoryError(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	query := domain.TaskQuery{UserId: "1", StartDate: start, EndDate: end, Limit: 20}
 
 	mockRepo := new(mockTaskRepository)
-	mockRepo.On("FindTasks", "1", start, end).Return([]domain.Task{}, assert.AnError)
+	mockRepo.On("FindTasks", query).Return(domain.TaskPage{}, assert.AnError)
 
 	svc := NewTaskService(mockRepo)
-	_, err := svc.FindTasks("1", start, end)
+	_, err := svc.FindTasks(query)
 
 	require.Error(t, err)
 	mockRepo.AssertExpectations(t)
