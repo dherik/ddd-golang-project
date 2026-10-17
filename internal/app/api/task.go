@@ -32,14 +32,12 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 		return err
 	}
 
-	startDateParam := c.QueryParam("startDate")
-	endDateParam := c.QueryParam("endDate")
-	startDate, err := time.Parse(time.RFC3339, startDateParam)
-	if err != nil {
+	startDate, ok := parseOptionalDate(c.QueryParam("startDate"))
+	if !ok {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid start date")
 	}
-	endDate, err := time.Parse(time.RFC3339, endDateParam)
-	if err != nil {
+	endDate, ok := parseOptionalDate(c.QueryParam("endDate"))
+	if !ok {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid end date")
 	}
 	limit, ok := parseTaskPageSize(c.QueryParam("limit"))
@@ -112,6 +110,17 @@ func (h *TaskHandler) createTask(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusCreated)
+}
+
+func parseOptionalDate(raw string) (*time.Time, bool) {
+	if raw == "" {
+		return nil, true
+	}
+	parsed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return nil, false
+	}
+	return &parsed, true
 }
 
 func parseTaskPageSize(raw string) (int, bool) {

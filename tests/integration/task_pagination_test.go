@@ -249,6 +249,92 @@ func (s *TaskTestSuite) TestPaginationRejectsInvalidPageParameters() {
 	}
 }
 
+func (s *TaskTestSuite) TestPaginationWithoutDateFilters() {
+	token := setup.Login("jane_smith", "some_password")
+
+	base := time.Date(2025, 7, 1, 0, 0, 0, 0, time.UTC)
+	for i := 1; i <= 25; i++ {
+		setup.InsertTaskWithCreatedAt(3, fmt.Sprintf("Undated task %02d", i), base.Add(time.Duration(i)*time.Minute))
+	}
+
+	page := s.fetchTaskPage(token, url.Values{})
+
+	s.Len(page.Items, 20)
+	s.True(page.HasMore)
+	s.Equal("Undated task 25", page.Items[0].Description)
+	s.Equal("Undated task 06", page.Items[19].Description)
+}
+
+func (s *TaskTestSuite) TestPaginationAcceptsOnlyAStartDate() {
+	token := setup.Login("jane_smith", "some_password")
+
+	boundary := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	setup.InsertTaskWithCreatedAt(3, "Old task", boundary.AddDate(-1, 0, 0))
+	setup.InsertTaskWithCreatedAt(3, "Boundary task", boundary)
+	setup.InsertTaskWithCreatedAt(3, "New task", boundary.AddDate(1, 0, 0))
+
+	page := s.fetchTaskPage(token, url.Values{
+		"startDate": {boundary.Format(time.RFC3339)},
+	})
+
+	s.Require().Len(page.Items, 2)
+	s.Equal("New task", page.Items[0].Description)
+	s.Equal("Boundary task", page.Items[1].Description)
+	s.False(page.HasMore)
+}
+
+func (s *TaskTestSuite) TestPaginationAcceptsOnlyAnEndDate() {
+	token := setup.Login("jane_smith", "some_password")
+
+	boundary := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	setup.InsertTaskWithCreatedAt(3, "Old task", boundary.AddDate(-1, 0, 0))
+	setup.InsertTaskWithCreatedAt(3, "Boundary task", boundary)
+	setup.InsertTaskWithCreatedAt(3, "New task", boundary.AddDate(1, 0, 0))
+
+	page := s.fetchTaskPage(token, url.Values{
+		"endDate": {boundary.Format(time.RFC3339)},
+	})
+
+	s.Require().Len(page.Items, 2)
+	s.Equal("Boundary task", page.Items[0].Description)
+	s.Equal("Old task", page.Items[1].Description)
+	s.False(page.HasMore)
+}
+
+func (s *TaskTestSuite) TestPaginationRejectsMalformedDates() {
+	token := setup.Login("admin", "some_password")
+
+	cases := []struct {
+		name    string
+		param   string
+		message string
+	}{
+		{name: "invalid start date", param: "startDate", message: "invalid start date"},
+		{name: "invalid end date", param: "endDate", message: "invalid end date"},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			params := url.Values{}
+			params.Set(tc.param, "not-a-date")
+
+			status, body := s.requestTaskList(token, params)
+
+			s.Require().Equal(http.StatusBadRequest, status, string(body))
+
+			var errorBody struct {
+				Error struct {
+					Code    int    `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
+			s.Require().NoError(json.Unmarshal(body, &errorBody))
+			s.Equal(http.StatusBadRequest, errorBody.Error.Code)
+			s.Equal(tc.message, errorBody.Error.Message)
+		})
+	}
+}
+
 func (s *TaskTestSuite) TestPaginationOnlyReturnsTheCallersTasks() {
 	adminToken := setup.Login("admin", "some_password")
 	johnToken := setup.Login("john_doe", "some_password")

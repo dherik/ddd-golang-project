@@ -31,8 +31,8 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", domain.TaskQuery{
 		UserId:    "1",
-		StartDate: start,
-		EndDate:   end,
+		StartDate: &start,
+		EndDate:   &end,
 		Limit:     20,
 	}).Return(domain.TaskPage{
 		Tasks: []domain.Task{

@@ -32,7 +32,7 @@ func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage,
 func TestTaskService_FindTasks(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	query := domain.TaskQuery{UserId: "1", StartDate: start, EndDate: end, Limit: 20}
+	query := domain.TaskQuery{UserId: "1", StartDate: &start, EndDate: &end, Limit: 20}
 
 	expectedTasks := []domain.Task{
 		{Id: 1, UserId: "1", Description: "Task 1", CreatedAt: time.Now().UTC()},
@@ -56,7 +56,7 @@ func TestTaskService_FindTasks(t *testing.T) {
 func TestTaskService_FindTasks_RepositoryError(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	query := domain.TaskQuery{UserId: "1", StartDate: start, EndDate: end, Limit: 20}
+	query := domain.TaskQuery{UserId: "1", StartDate: &start, EndDate: &end, Limit: 20}
 
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{}, assert.AnError)

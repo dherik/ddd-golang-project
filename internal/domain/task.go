@@ -44,8 +44,8 @@ func NewTask(userId string, description string) (Task, error) {
 
 type TaskQuery struct {
 	UserId    string
-	StartDate time.Time
-	EndDate   time.Time
+	StartDate *time.Time
+	EndDate   *time.Time
 	Limit     int
 	Offset    int
 }

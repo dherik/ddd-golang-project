@@ -46,7 +46,9 @@ func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, 
 	db := r.pgsql.connect()
 
 	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task
-		where user_id = $1 AND created_at >= $2 AND created_at <= $3
+		where user_id = $1
+		  AND ($2::timestamptz IS NULL OR created_at >= $2)
+		  AND ($3::timestamptz IS NULL OR created_at <= $3)
 		ORDER BY created_at DESC, id DESC
 		LIMIT $4 OFFSET $5`, query.UserId, query.StartDate, query.EndDate, query.Limit+1, query.Offset)
 	if err != nil {
