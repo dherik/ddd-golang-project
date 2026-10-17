@@ -52,7 +52,7 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 		UserId:    userId,
 		StartDate: startDate,
 		EndDate:   endDate,
-		Limit:     limit,
+		PageSize:  limit,
 		Offset:    offset,
 	}
 	tasks, err := h.TaskService.FindTasks(query)

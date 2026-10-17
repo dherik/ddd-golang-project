@@ -35,7 +35,7 @@ func (s *TaskService) FindTasks(query domain.TaskQuery) (TasksResponse, error) {
 		"userId", query.UserId,
 		"startDate", query.StartDate,
 		"endDate", query.EndDate,
-		"limit", query.Limit,
+		"pageSize", query.PageSize,
 		"offset", query.Offset,
 	)
 	page, err := s.taskRepository.FindTasks(query)

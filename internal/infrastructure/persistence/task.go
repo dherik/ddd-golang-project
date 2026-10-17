@@ -43,7 +43,7 @@ func toTaskDomain(taskDb Task) domain.Task {
 }
 
 func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
-	if query.Limit < 1 {
+	if query.PageSize < 1 {
 		return domain.TaskPage{}, fmt.Errorf("page size must be at least 1")
 	}
 	if query.Offset < 0 {
@@ -58,7 +58,7 @@ func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, 
 		  AND ($2::timestamptz IS NULL OR created_at >= $2)
 		  AND ($3::timestamptz IS NULL OR created_at <= $3)
 		ORDER BY created_at DESC, id DESC
-		LIMIT $4 OFFSET $5`, query.UserId, query.StartDate, query.EndDate, query.Limit+1, query.Offset)
+		LIMIT $4 OFFSET $5`, query.UserId, query.StartDate, query.EndDate, query.PageSize+1, query.Offset)
 	if err != nil {
 		return domain.TaskPage{}, fmt.Errorf("failed to execute query: %w", err)
 	}
@@ -77,9 +77,9 @@ func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, 
 		return domain.TaskPage{}, fmt.Errorf("failed iterating rows: %w", err)
 	}
 
-	hasMore := len(tasks) > query.Limit
+	hasMore := len(tasks) > query.PageSize
 	if hasMore {
-		tasks = tasks[:query.Limit]
+		tasks = tasks[:query.PageSize]
 	}
 
 	return domain.TaskPage{Tasks: toTaskDomainList(tasks), HasMore: hasMore}, nil

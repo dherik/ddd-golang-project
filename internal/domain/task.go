@@ -46,7 +46,7 @@ type TaskQuery struct {
 	UserId    string
 	StartDate *time.Time
 	EndDate   *time.Time
-	Limit     int
+	PageSize  int
 	Offset    int
 }
 

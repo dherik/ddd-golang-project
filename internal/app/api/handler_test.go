@@ -33,7 +33,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 		UserId:    "1",
 		StartDate: &start,
 		EndDate:   &end,
-		Limit:     20,
+		PageSize:  20,
 	}).Return(domain.TaskPage{
 		Tasks: []domain.Task{
 			{Id: 1, UserId: "1", Description: "Task 1", CreatedAt: now},
