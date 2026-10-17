@@ -138,9 +138,14 @@ func parseTaskPageOffset(raw string) (int, bool) {
 	if raw == "" {
 		return 0, true
 	}
-	offset, err := strconv.Atoi(raw)
-	if err != nil || offset < 0 {
+	offset, err := strconv.ParseUint(raw, 10, 63)
+	if err != nil {
+		// A number too large for an int is still a valid offset: it is simply
+		// beyond any page, so treat it as past the end instead of malformed.
+		if errors.Is(err, strconv.ErrRange) {
+			return int(^uint(0) >> 1), true
+		}
 		return 0, false
 	}
-	return offset, true
+	return int(offset), true
 }

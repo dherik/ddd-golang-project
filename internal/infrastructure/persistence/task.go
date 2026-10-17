@@ -43,8 +43,16 @@ func toTaskDomain(taskDb Task) domain.Task {
 }
 
 func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
+	if query.Limit < 1 {
+		return domain.TaskPage{}, fmt.Errorf("page size must be at least 1")
+	}
+	if query.Offset < 0 {
+		return domain.TaskPage{}, fmt.Errorf("offset must not be negative")
+	}
+
 	db := r.pgsql.connect()
 
+	// Fetch one row beyond the page so HasMore is known without a COUNT.
 	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task
 		where user_id = $1
 		  AND ($2::timestamptz IS NULL OR created_at >= $2)

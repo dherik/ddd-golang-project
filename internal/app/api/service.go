@@ -31,7 +31,13 @@ func (s *TaskService) AddTaskToUser(task domain.Task) error {
 }
 
 func (s *TaskService) FindTasks(query domain.TaskQuery) (TasksResponse, error) {
-	slog.Info("find tasks between dates", "userId", query.UserId, "startDate", query.StartDate, "endDate", query.EndDate)
+	slog.Info("find task page",
+		"userId", query.UserId,
+		"startDate", query.StartDate,
+		"endDate", query.EndDate,
+		"limit", query.Limit,
+		"offset", query.Offset,
+	)
 	page, err := s.taskRepository.FindTasks(query)
 	if err != nil {
 		return TasksResponse{}, fmt.Errorf("failed finding tasks: %w", err)
