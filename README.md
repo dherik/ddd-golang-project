@@ -1,174 +1,34 @@
 # DDD Go Project
 
+A small REST API for managing tasks, built with Go and organized around Domain-Driven Design (DDD) layers. The project focuses on two things above everything else: **DDD design** and **integration testing** with Testcontainers. It doubles as a template for new Go services that want a pragmatic starting point: explicit layers, dependency injection, authentication, persistence, messaging, and automated tests.
+
+> **Using this repository as a template?** Start with the [Using this project as a template](#using-this-project-as-a-template) checklist before writing your own domain code.
+
 ## Introduction
 
-Welcome to the DDD Go Project, a dynamic project built with the Go programming language. This initiative is driven by a passion for DDD (Domain-Driven Design), Go, and test automation. 
+The project is a simple REST API (with authentication) for managing tasks. Its focus is the **DDD design** — explicit layers, the dependency rule, and a domain model free of HTTP and database concerns — and the **integration testing setup**, which exercises the full API against real PostgreSQL and RabbitMQ instances provisioned with Testcontainers.
 
-For now, the project is just a simple REST API (with authentication) for managing tasks. The DDD strategies applied are still very basic, so consider this project as a simplified implementation of this design. However, I plan to introduce more advanced concepts in the future.
+The DDD strategies applied are intentionally basic, so consider this a simplified implementation of the design. More advanced concepts can be layered on top.
 
-The code still has a lot of small issues and new things to implement. You can check the [Backlog of the project](https://github.com/users/dherik/projects/1) to follow what's comming up.
+The code still has small issues and things to improve. You can follow the [project backlog](https://github.com/users/dherik/projects/1) to see what is coming next.
 
-## How to run
+## Using this project as a template
 
-Prerequisites:
-- [Docker](https://www.docker.com)
-- [Go](https://go.dev) 1.27.2 or newer. I recommend to use [GVM](https://github.com/moovweb/gvm) to manage the Go versions
+When starting a new project from this repository, make it yours before adding features. The most reusable parts are the layer structure (see [Architecture](#architecture)) and the integration test harness (see [Tests](#tests)):
 
-You can run the project using choosing on the following methods:
-- Docker Compose;
-- Using the `make` command and initializing just the database (also with Docker Compose). This method is easier to debug the application.
+1. **Rename the module**: update `go.mod` and imports, for example `go mod edit -module github.com/your-user/your-project`, then replace `github.com/dherik/ddd-golang-project` across the code.
+2. **Replace the domain**: delete the task/user examples once you have your own entities, value objects, and repository interfaces in `internal/domain`.
+3. **Replace the database schema**: rewrite `init_ddl.sql` and `init_dml.sql` for your tables. Keep the same layering, and do not expose database rows outside `internal/infrastructure/persistence`.
+4. **Replace the credentials**: change the PostgreSQL credentials in `docker-compose.yml`, `config.yaml`, and `init_ddl.sql`.
+5. **Set your own JWT secret**: use the `JWT_SECRET` environment variable instead of the development secret committed in `config.yaml`.
+6. **Review the example endpoints**: keep, adapt, or remove `/tasks`, `/users`, and the RabbitMQ listener, depending on what your service needs.
+7. **Remove what you do not use**: the Bruno collection, k6 load tests, Ollama/Continue scripts, and the RabbitMQ integration can all be deleted without affecting the core API.
+8. **Update this README**: remove template-specific links and document your own domain, endpoints, and configuration.
+9. **Add what a template cannot decide for you**: CI, license, deployment manifests, and environment-specific configuration.
 
-Both methods are explained below.
+## Architecture
 
-### With just Docker Compose
-
-Just run:
-
-```sh
-docker compose build
-docker compose up
-```
-
-To bring down the containers:
-
-```sh
-docker compose down
-```
-
-### With Docker Compose + Makefile
-
-Run the database and the RabbitMQ broker:
-
-```sh
-docker compose up postgres rabbitmq
-```
-
-And run the application using the **Makefile**:
-
-```sh
-make build run
-```
-
-### How to run the tests
-
-To run the unit tests:
-
-```sh
-make unit-test
-```
-
-To run the integration tests (requires Docker):
-
-```sh
-make integration-test
-```
-
-## Run K6 load test
-
-Install the latest version of [K6](https://github.com/grafana/k6/) to be able to execute the tests.
-
-After install K6, just run `docker compose up` in one terminal and `make load-test-create-tasks` on another terminal. The test will finish in 3 minutes. You can use the same process for the other `load-test-*`.
-
-## Technical features
-
-Below is the extensive list of items that are implemented in the project that I classified as essential for a good Go project and make the developer's life easier as possible. As mentioned before, there are still many things to be adjusted, so consider that this project is always evolving.
-
-- Using Docker Compose to facilitate development
-- Simple steps to have the service up and running in the developer machine
-- Organized `README.md` file with all the necessary information to run and test the project
-- Unit tests
-- Integration tests using the testify to control test scenarios and TestContainers to set up the infrastructure (Postgres and RabbitMQ)
-- You can execute integration tests directly from your favorite IDE, as all necessary setup configurations are embedded within the code.
-- REST API endpoints following best practice standards (using plural nouns, avoiding verbs, employing hierarchy, adopting correct standards for representing dates, etc.)
-- Secure endpoints with authentication (JWT)
-- Using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/)
-- Use of structured logging using Go `slog`
-- Very well organized `Makefile`
-- Versioned files with the [collection of endpoints](docs/bruno/), ready to import on [Bruno](https://www.usebruno.com)
-- `launch.json` file for Visual Studio Code already configured for debugging the application
-- Use of short names for Go packages
-- Use of dependency injection pattern
-- Domain models totally independent from other layers, not using domain objects on persistence (database) or application (API) layers.
-- Use of `govulncheck` to find security vulnerabilities
-- Use of Go upgrade tool to upgrade the dependencies to the latest version
-- Pull Request template to provide a baseline standard of informational quality and organizational rigor
-- Use of Local LLM ([LM Studio](https://lmstudio.ai) + [Llama 3](https://huggingface.co/meta-llama/Meta-Llama-3-8B) model) to help in the initial project setup
-- Use of [Continue](https://www.continue.dev/) extension as AI code assistant, using the models [Llama 3 8B](https://ollama.com/library/llama3) for chat and [Starcoder 2 3B](https://ollama.com/library/starcoder2:3b) for code generation, using [Ollama](https://ollama.com) as model server.
-
-What is coming next? See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board).
-
-## Structure
-
-```sh
-.
-├── config.yaml             # Application configuration
-├── docker-compose.yml      # Used for development
-├── Dockerfile
-├── docs                    # General documentation
-│   └── bruno               # Bruno collections ready to import and use
-│       ├── bruno.json
-│       ├── Create task.bru
-│       ├── Create user.bru
-│       ├── Find task.bru
-│       ├── Find task by id.bru
-│       ├── Login.bru
-│       └── environments
-│           └── Local.bru
-├── init_ddl.sql            # DDL (SQL to create tables, FKs, etc)
-├── init_dml.sql            # DML (seed data) for database
-├── internal
-│   ├── app                 # Application layer (DDD)
-│   │   ├── api             # API handlers, services, and routes
-│   │   │   ├── login.go
-│   │   │   ├── routes.go
-│   │   │   ├── service.go
-│   │   │   ├── task.go
-│   │   │   └── user.go
-│   │   ├── messaging       # Message listeners and handlers
-│   │   │   ├── handlers.go
-│   │   │   └── listener.go
-│   │   └── server.go
-│   ├── config              # Configuration loader
-│   │   └── config.go
-│   ├── domain              # Domain layer (DDD)
-│   │   ├── password.go
-│   │   ├── password_test.go
-│   │   ├── task.go
-│   │   ├── task_test.go
-│   │   ├── user.go
-│   │   └── user_test.go
-│   └── infrastructure      # Infrastructure layer (DDD)
-│       ├── external
-│       │   └── weatherapi.go
-│       ├── messaging
-│       │   └── rabbitmq
-│       │       └── rabbitmq.go
-│       └── persistence
-│           ├── postgresql.go
-│           ├── task.go
-│           └── user.go
-├── main.go
-├── Makefile
-├── README.md
-├── scripts
-│   └── start-ollama-continue.sh
-└── tests
-    └── integration
-        ├── integration_test.go
-        ├── setup
-        │   ├── broker.go
-        │   ├── broker_command.go
-        │   ├── database.go
-        │   ├── login.go
-        │   ├── server.go
-        │   └── setup.go
-        ├── task_test.go
-        └── user_test.go
-```
-
-With this structure, you maintain a clear separation of concerns between domain logic, application services, and infrastructure code. You can apply DDD principles to your domain entities, services, and repositories while keeping your codebase organized and easy to understand.
-
-Dependencies in a DDD Service: the Application layer depends on Domain and Infrastructure, and Infrastructure depends on Domain, but Domain doesn't depend on any layer:
+The project follows the classic DDD dependency rule: inner layers define the contracts, outer layers implement them. The domain layer has no knowledge of HTTP, SQL, or messaging. This layer separation is one of the two main focuses of the project: the domain stays independent while HTTP, persistence, and messaging live in replaceable outer layers.
 
 ```
 ┌──────────────────────┐
@@ -182,9 +42,307 @@ Dependencies in a DDD Service: the Application layer depends on Domain and Infra
 └──────────────────────┘
 ```
 
-## AI Code assistant
+- **Domain** (`internal/domain`): entities, validation rules, and repository interfaces. No external dependencies.
+- **Application** (`internal/app`): HTTP handlers, services/use cases, DTOs, routes, and message consumers. Depends on domain and (through interfaces) infrastructure.
+- **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, and external integrations. Depends on domain.
+- **Config** (`internal/config`): loads `config.yaml` and applies environment variable overrides.
 
-You can setup the AI code assistant installing the [Continue](https://www.continue.dev/) extension, the [Ollama](https://ollama.com) server and following the instructions and executing this [README.md](scripts/README.md) file.
+### Where to add new code
+
+| What you are adding | Where it goes |
+|---|---|
+| Entity, value object, domain rule | `internal/domain` |
+| Repository interface | `internal/domain` (next to the entity) |
+| Use case / service | `internal/app/api` (or a dedicated use case package as the project grows) |
+| HTTP handler, request/response DTO, route | `internal/app/api` |
+| Repository implementation | `internal/infrastructure/persistence` |
+| External API client | `internal/infrastructure/external` |
+| Message consumer | `internal/app/messaging` + `internal/infrastructure/messaging` |
+
+### Project structure
+
+```sh
+.
+├── config.yaml             # Application configuration
+├── docker-compose.yml      # Local development environment
+├── Dockerfile              # Multi-stage, non-root production image
+├── init_ddl.sql            # Schema (tables, constraints, indexes)
+├── init_dml.sql            # Seed data
+├── docs
+│   └── bruno               # Bruno collection ready to import
+├── internal
+│   ├── app
+│   │   ├── api             # Handlers, services, routes, auth helper
+│   │   ├── messaging       # Message listener and handlers
+│   │   └── server.go       # Application wiring and server startup
+│   ├── config              # Configuration loader
+│   ├── domain              # Domain entities and repository interfaces
+│   └── infrastructure
+│       ├── external        # External integrations
+│       ├── messaging       # RabbitMQ client
+│       └── persistence     # PostgreSQL repositories
+├── tests
+│   ├── integration         # Testcontainers-based integration tests
+│   └── load                # k6 load tests
+├── main.go
+├── Makefile
+└── README.md
+```
+
+## Getting started
+
+### Prerequisites
+
+- [Docker](https://www.docker.com) (required for Docker Compose and integration tests)
+- [Go](https://go.dev) 1.27.2 or newer. [GVM](https://github.com/moovweb/gvm) is a practical way to manage Go versions.
+- Optional: [k6](https://github.com/grafana/k6) for load tests and [Bruno](https://www.usebruno.com) for the API collection.
+
+### Run everything with Docker Compose
+
+```sh
+docker compose build
+docker compose up
+```
+
+To stop the containers:
+
+```sh
+docker compose down
+```
+
+### Run the application locally with Docker services
+
+Start PostgreSQL and RabbitMQ:
+
+```sh
+docker compose up postgres rabbitmq
+```
+
+Then build and run the application with the Makefile:
+
+```sh
+make build run
+```
+
+This method makes debugging easier because the Go process runs on the host.
+
+### Configuration
+
+Configuration lives in `config.yaml` and can be overridden with environment variables. This keeps the file safe to commit while allowing deployment-specific values.
+
+| Config key | Environment variable(s) | Default |
+|---|---|---|
+| `http.port` | `HTTP_PORT` | `3333` |
+| `database.host` | `DB_HOST`, `DATABASE_HOST` | `localhost` |
+| `database.port` | `DB_PORT`, `DATABASE_PORT` | `5432` |
+| `database.user` | `DB_USER`, `DATABASE_USER` | `pguser` |
+| `database.password` | `DB_PASSWORD`, `DATABASE_PASSWORD` | `pgpassword` |
+| `database.name` | `DB_NAME`, `DATABASE_NAME` | `dddtasks` |
+| `jwt.secret` | `JWT_SECRET` | development value in `config.yaml` |
+| `broker.host` | `BROKER_HOST`, `RABBITMQ_HOST` | `localhost` |
+| `broker.port` | `BROKER_PORT`, `RABBITMQ_PORT` | `5672` |
+| `broker.user` | `BROKER_USER`, `RABBITMQ_USER` | `guest` |
+| `broker.password` | `BROKER_PASSWORD`, `RABBITMQ_PASSWORD` | `guest` |
+
+Always set `JWT_SECRET` in production. Never commit a real secret.
+
+### Make targets
+
+| Target | Description |
+|---|---|
+| `make build` | Builds the `main` binary |
+| `make run` | Builds and runs the application against local services |
+| `make unit-test` | Runs unit tests only (`-short`, integration tests are skipped) |
+| `make integration-test` | Runs all tests with coverage, including Testcontainers-based integration tests |
+| `make test` | Runs every test verbosely |
+| `make vulnerability-check` | Runs `govulncheck` against the module |
+| `make upgrade-deps-latest-patch` | Updates dependencies to the latest patch versions |
+| `make upgrade-deps-latest-version` | Updates dependencies to their latest versions |
+| `make load-test-create-tasks` | Runs the k6 task creation load test |
+| `make clean` | Removes the built binary |
+
+## Tests
+
+Integration testing is the other main focus of the project. The test suite runs against the real HTTP server and real infrastructure, so it validates the wiring between the DDD layers instead of mocking it away. Unit tests cover the domain and application rules in isolation.
+
+### Unit tests
+
+```sh
+make unit-test
+```
+
+or:
+
+```sh
+go test -short ./...
+```
+
+`-short` is important: integration tests check `testing.Short()` and skip themselves, so a green short run does not execute them.
+
+### Integration tests
+
+The integration tests start PostgreSQL and RabbitMQ with [Testcontainers](https://golang.testcontainers.org), start the real HTTP server, and exercise the API end to end. Docker must be running.
+
+```sh
+make integration-test
+```
+
+or the integration suite only:
+
+```sh
+go test -count=1 -v ./tests/integration/...
+```
+
+Both setup and teardown are embedded in the test code, so the suite can also be executed from an IDE.
+
+### Race detector
+
+```sh
+go test -race -short ./...
+```
+
+## API
+
+The API is served at `http://localhost:3333` by default.
+
+### Authentication
+
+1. `POST /login` with a username and password.
+2. Receive a JWT signed with `HS256`, valid for 72 hours.
+3. Send it on protected endpoints as `Authorization: Bearer <token>`.
+
+The token contains `userId`, `name`, `email`, `sub`, `iat`, and `exp`. The seeded `admin` user (`some_password`) exists only for local development.
+
+```sh
+TOKEN=$(curl -s -X POST http://localhost:3333/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"some_password"}' | jq -r .token)
+```
+
+### Endpoints
+
+| Method | Path | Authentication | Description |
+|---|---|---|---|
+| `POST` | `/login` | Public | Exchanges credentials for a JWT. |
+| `POST` | `/users` | JWT | Creates a user. Returns `409` for duplicate username or email. |
+| `GET` | `/tasks` | JWT | Lists the authenticated user's tasks. Requires `startDate` and `endDate` query parameters in RFC 3339 format. |
+| `GET` | `/tasks/:id` | JWT | Returns one task owned by the authenticated user, or `404`. |
+| `POST` | `/tasks` | JWT | Creates a task for the authenticated user. The owner always comes from the token; the body only needs a `description`. |
+| `GET` | `/api/health` | Public | Liveness endpoint. |
+
+Task ownership is enforced in the persistence layer: a user can never read or create tasks for another user. Asking for someone else's task returns `404`, so task IDs are not leaked.
+
+### Examples
+
+```sh
+# Create a task for the authenticated user
+curl -s -X POST http://localhost:3333/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"description":"Write the README"}'
+
+# Find tasks in a date range (RFC 3339)
+curl -s "http://localhost:3333/tasks?startDate=2024-02-10T00:00:00Z&endDate=2024-02-25T23:59:59Z" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Find a task by ID
+curl -s http://localhost:3333/tasks/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Error responses
+
+Errors use a consistent JSON body:
+
+```json
+{
+  "timestamp": "2026-10-17T12:00:00Z",
+  "error": {
+    "code": 404,
+    "message": "task not found"
+  }
+}
+```
+
+| Status | Meaning |
+|---|---|
+| `200` | Request succeeded |
+| `201` | Resource created |
+| `400` | Invalid payload, query parameter, or path parameter |
+| `401` | Missing, invalid, or expired token |
+| `404` | Resource not found (or not owned by the authenticated user) |
+| `409` | Duplicate username or email |
+| `500` | Unexpected server error |
+
+## Load tests
+
+Install [k6](https://github.com/grafana/k6), start the stack with `docker compose up`, and run:
+
+```sh
+make load-test-create-tasks
+```
+
+The test ramps up to 50 virtual users, logs in as the seeded admin user, and creates tasks. It finishes after 3 minutes.
+
+## Security notes
+
+- Set `JWT_SECRET` through the environment; the committed value is for local development only.
+- Passwords are hashed with bcrypt at the library default cost.
+- Tasks are scoped to the authenticated user in every task endpoint.
+- Duplicate usernames and emails are rejected on the database level, not only in application code.
+- `make vulnerability-check` runs `govulncheck` against the module and its dependencies.
+
+## Technical features
+
+The DDD design and the integration testing setup are the two areas this project focuses on. The remaining features exist to support them.
+
+### Architecture and code quality
+
+- Domain models totally independent from the other layers: domain objects are not used in the persistence or API layers.
+- Classic DDD layering with the dependency rule pointing inward (Application → Domain, Infrastructure → Domain, Domain → nothing).
+- Dependency injection through constructors and small interfaces.
+- Short, focused names for Go packages.
+- User-owned resources enforced in the persistence layer using the user ID from the JWT.
+
+### Testing
+
+- Unit tests using [Testify](https://github.com/stretchr/testify).
+- Integration tests using Testify suites and [Testcontainers](https://golang.testcontainers.org) to provision PostgreSQL and RabbitMQ.
+- All integration test setup is embedded in the code, so the suite runs directly from your IDE.
+- `-short` separates fast unit tests from the full integration suite.
+
+### API and security
+
+- REST API following common conventions: plural nouns, no verbs, hierarchy, and RFC 3339 dates.
+- Endpoints protected with JWT authentication; the token carries `userId`, `name`, and `email`.
+- Consistent JSON error responses with meaningful HTTP status codes.
+- Passwords hashed with bcrypt at the library default cost.
+- `govulncheck` integrated in the Makefile for dependency vulnerability scanning.
+
+### Developer experience and tooling
+
+- Docker Compose to facilitate local development.
+- Simple steps to have the service up and running on a developer machine.
+- Multi-stage, non-root production Docker image.
+- Configuration through `config.yaml` with environment variable overrides.
+- Well-organized `Makefile` covering build, run, tests, dependency upgrades (latest and latest patch), vulnerability check, and load tests.
+- Organized `README.md` with everything necessary to run and test the project.
+- Versioned [Bruno collection](docs/bruno/) ready to import.
+- Visual Studio Code `launch.json` already configured for debugging.
+- Conventional commit messages and a pull request template.
+- Structured logging with Go `slog`, request IDs, and latency.
+
+## Known gaps
+
+These are intentional next steps rather than surprises:
+
+- No refresh tokens or logout endpoint.
+- No pagination on `GET /tasks`; the date range is currently required.
+- No rate limiting, body size limit, or configurable HTTP server timeouts yet.
+- Integration tests currently use a fixed port (`3333`) and stop only the database container on teardown.
+
+See the [project backlog](https://github.com/users/dherik/projects/1/views/1?layout=board) for the current plan.
+
 
 ## Technical references
 
