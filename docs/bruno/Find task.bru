@@ -4,6 +4,12 @@ meta {
   seq: 3
 }
 
+docs {
+  Returns one task page: { "items": [...], "hasMore": false }.
+  startDate and endDate are optional and inclusive. limit defaults to 20 (max 100); offset defaults to 0.
+  A task created between page requests can repeat the last row of the previous page; pin endDate to the first page's newest createdAt to freeze the walk.
+}
+
 get {
   url: http://localhost:3333/tasks?startDate=2024-02-10T10:04:05Z&endDate=2024-02-25T01:34:05Z&limit=20&offset=0
   body: none

@@ -12,7 +12,7 @@ _Avoid_: chunk, batch, result set
 
 **Page size**:
 The maximum number of tasks a task page may contain.
-_Avoid_: limit, per_page, pageSize
+_Avoid_: per_page, pageSize
 
 **Offset**:
 The number of tasks skipped from the start of the ordered list before a task page begins.
