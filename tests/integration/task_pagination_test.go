@@ -59,6 +59,14 @@ func (s *TaskTestSuite) assertErrorResponse(status int, body []byte, wantStatus 
 	s.Equal(wantMessage, errorBody.Error.Message)
 }
 
+func (s *TaskTestSuite) assertEmptyItemsArray(body []byte) {
+	s.T().Helper()
+
+	var envelope map[string]json.RawMessage
+	s.Require().NoError(json.Unmarshal(body, &envelope))
+	s.Equal("[]", strings.TrimSpace(string(envelope["items"])))
+}
+
 func wideDateRange() url.Values {
 	return url.Values{
 		"startDate": {"2020-01-01T00:00:00Z"},
@@ -178,20 +186,26 @@ func (s *TaskTestSuite) TestPaginationPastTheEndReturnsAnEmptyArray() {
 	base := time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC)
 	setup.InsertTaskWithCreatedAt(3, "Only task", base)
 
-	params := wideDateRange()
-	params.Set("offset", "10")
+	offsets := map[string]string{
+		"just past the end":            "10",
+		"larger than any int can hold": "999999999999999999999999999",
+	}
 
-	status, body := s.requestTaskList(token, params)
-	s.Require().Equal(http.StatusOK, status, string(body))
+	for name, offset := range offsets {
+		s.Run(name, func() {
+			params := wideDateRange()
+			params.Set("offset", offset)
 
-	var page api.TasksResponse
-	s.Require().NoError(json.Unmarshal(body, &page))
-	s.Empty(page.Items)
-	s.False(page.HasMore)
+			status, body := s.requestTaskList(token, params)
+			s.Require().Equal(http.StatusOK, status, string(body))
 
-	var envelope map[string]json.RawMessage
-	s.Require().NoError(json.Unmarshal(body, &envelope))
-	s.Equal("[]", strings.TrimSpace(string(envelope["items"])))
+			var page api.TasksResponse
+			s.Require().NoError(json.Unmarshal(body, &page))
+			s.Empty(page.Items)
+			s.False(page.HasMore)
+			s.assertEmptyItemsArray(body)
+		})
+	}
 }
 
 func (s *TaskTestSuite) TestPaginationBreaksTimestampTiesByDescendingId() {
@@ -411,10 +425,7 @@ func (s *TaskTestSuite) TestPaginationReturnsAnEmptyPageForAUserWithNoTasks() {
 	s.Require().NoError(json.Unmarshal(body, &page))
 	s.Empty(page.Items)
 	s.False(page.HasMore)
-
-	var envelope map[string]json.RawMessage
-	s.Require().NoError(json.Unmarshal(body, &envelope))
-	s.Equal("[]", strings.TrimSpace(string(envelope["items"])))
+	s.assertEmptyItemsArray(body)
 }
 
 func (s *TaskTestSuite) TestPaginationAppliesDateBoundsToEveryPage() {
@@ -457,4 +468,41 @@ func (s *TaskTestSuite) TestPaginationAppliesDateBoundsToEveryPage() {
 		"In range task 02",
 		"In range task 01",
 	}, descriptions)
+}
+
+func (s *TaskTestSuite) TestPaginationReturnsAnEmptyPageWhenTheDateFilterMatchesNothing() {
+	token := setup.Login("jane_smith", "some_password")
+
+	setup.InsertTaskWithCreatedAt(3, "Too old for the filter", time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+
+	status, body := s.requestTaskList(token, url.Values{
+		"startDate": {"2035-01-01T00:00:00Z"},
+	})
+	s.Require().Equal(http.StatusOK, status, string(body))
+
+	var page api.TasksResponse
+	s.Require().NoError(json.Unmarshal(body, &page))
+	s.Empty(page.Items)
+	s.False(page.HasMore)
+	s.assertEmptyItemsArray(body)
+}
+
+func (s *TaskTestSuite) TestPaginationTreatsEmptyParametersAsAbsent() {
+	token := setup.Login("jane_smith", "some_password")
+
+	base := time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC)
+	for i := 1; i <= 25; i++ {
+		setup.InsertTaskWithCreatedAt(3, fmt.Sprintf("Empty param task %02d", i), base.Add(time.Duration(i)*time.Minute))
+	}
+
+	baseline := s.fetchTaskPage(token, url.Values{})
+	withEmptyValues := s.fetchTaskPage(token, url.Values{
+		"limit":     {""},
+		"offset":    {""},
+		"startDate": {""},
+		"endDate":   {""},
+	})
+
+	s.Equal(baseline.Items, withEmptyValues.Items)
+	s.Equal(baseline.HasMore, withEmptyValues.HasMore)
 }
