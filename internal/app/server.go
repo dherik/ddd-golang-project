@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
-	listener "github.com/dherik/ddd-golang-project/internal/app/messaging"
+	"github.com/dherik/ddd-golang-project/internal/app/messaging"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
@@ -42,6 +42,8 @@ func (s *Server) Start() {
 	userHandler := api.NewUserHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
+	setupSlog()
+
 	rabbitMQ, err := rabbitmq.NewRabbitMQ(s.RabbitMQDataSource.ConnectionString())
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
@@ -70,26 +72,30 @@ func (s *Server) Start() {
 		log.Fatalf("Failed to declare and bind RabbitMQ queue: %v", err)
 	}
 
-	messageListener := listener.NewMessageListener(rabbitMQ)
-	calendarHandler := &listener.CalendarHandler{}
-
-	if err := messageListener.StartListening(ctx, queueCalendar.Name, calendarHandler); err != nil {
-		log.Fatalf("Failed to start listening to order queue: %v", err)
-	}
-
 	queueInvoiceDue, err := rabbitMQ.DeclareQueueAndBind(
 		"todo-service.events.billing.invoice-due", "billing", "invoice-due", deadLetterArgs)
 	if err != nil {
 		log.Fatalf("Failed to declare and bind RabbitMQ queue: %v", err)
 	}
 
-	invoiceDueHandler := listener.NewInvoiceDueHandler(taskService)
-
-	if err := messageListener.StartListening(ctx, queueInvoiceDue.Name, invoiceDueHandler); err != nil {
-		log.Fatalf("Failed to start listening to invoice due queue: %v", err)
+	consumer, err := messaging.NewConsumer(s.RabbitMQDataSource.ConnectionString())
+	if err != nil {
+		log.Fatalf("Failed to create the event consumer: %v", err)
 	}
 
-	setupSlog()
+	calendarHandler := &messaging.CalendarHandler{}
+	consumer.Add(queueCalendar.Name, calendarHandler.HandleMessage)
+
+	invoiceDueHandler := messaging.NewInvoiceDueHandler(taskService)
+	consumer.Add(queueInvoiceDue.Name, invoiceDueHandler.HandleMessage)
+
+	go func() {
+		if err := consumer.Run(ctx); err != nil {
+			slog.Error("event consumer stopped", "err", err)
+			return
+		}
+		slog.Error("event consumer stopped unexpectedly: no handler is running")
+	}()
 
 	mux := http.NewServeMux()
 	routes.SetupRoutes(mux)

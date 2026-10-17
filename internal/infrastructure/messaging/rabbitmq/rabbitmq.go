@@ -128,18 +128,6 @@ func (r *RabbitMQ) BindQueue(queueName, exchange, routingKey string) error {
 	)
 }
 
-func (r *RabbitMQ) Consume(queueName string) (<-chan amqp.Delivery, error) {
-	return r.channel.Consume(
-		queueName,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-}
-
 func (r *RabbitMQ) Close() {
 	if r.channel != nil {
 		if err := r.channel.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {

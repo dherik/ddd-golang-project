@@ -1,7 +1,6 @@
 package messaging
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,27 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
 const dateOnlyLayout = "2006-01-02"
-
-// Delivery is the slice of a broker delivery that handlers and the listener
-// rely on. The broker's own delivery type satisfies it; tests satisfy it
-// with a recording fake.
-type Delivery interface {
-	Body() []byte
-	Ack(multiple bool) error
-	Nack(multiple, requeue bool) error
-}
-
-// MessageHandler consumes one event. Failures must be classified: wrap a
-// failure that no retry can fix with Permanent; every other failure is
-// transient. The listener owns the acknowledgement decision.
-type MessageHandler interface {
-	HandleMessage(ctx context.Context, msg Delivery) error
-}
 
 // InvoiceDueEvent is the payload published by the external billing service
 // when an invoice belonging to a user must be paid by a due date. It is a
@@ -54,9 +39,13 @@ func NewInvoiceDueHandler(taskService *api.TaskService) *InvoiceDueHandler {
 	return &InvoiceDueHandler{TaskService: taskService}
 }
 
-func (h *InvoiceDueHandler) HandleMessage(ctx context.Context, msg Delivery) error {
+// HandleMessage consumes one invoice due event. Failures are classified:
+// permanent failures (undecodable payloads, invalid fields) are wrapped with
+// Permanent so the subscriber can park them without retrying; every other
+// failure is transient.
+func (h *InvoiceDueHandler) HandleMessage(msg *message.Message) error {
 	var event InvoiceDueEvent
-	if err := json.Unmarshal(msg.Body(), &event); err != nil {
+	if err := json.Unmarshal(msg.Payload, &event); err != nil {
 		return Permanent(fmt.Errorf("invalid payload: %w", err))
 	}
 
@@ -113,8 +102,8 @@ func (e InvoiceDueEvent) ReminderDescription() string {
 
 type CalendarHandler struct{}
 
-func (h *CalendarHandler) HandleMessage(ctx context.Context, msg Delivery) error {
-	log.Println("Received calendar message:", string(msg.Body()))
+func (h *CalendarHandler) HandleMessage(msg *message.Message) error {
+	log.Println("Received calendar message:", string(msg.Payload))
 	// Handle the message (e.g., parse JSON, update calendar, etc.)
 	return nil
 }

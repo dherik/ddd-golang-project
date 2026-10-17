@@ -2,7 +2,7 @@
 
 Status: accepted
 
-Event consumption runs on Watermill: its router executes our handlers, its AMQP subscriber (watermill-amqp, over the same amqp091-go client we already use) owns the consume loop, reconnection and channel recovery, and its retry middleware owns the transient-retry bound. A small classification middleware of ours keeps ADR-0003's semantics: permanent failures skip retry and return, so the broker parks them; transient failures retry three times, then return and are parked. Adoption is consume-only — no Watermill publisher, no CQRS or event-bus components. Our topology is untouched: the application keeps declaring every exchange, queue and binding, and Watermill consumes on the existing queues under pinned names.
+Event consumption runs on Watermill: its router executes our handlers, and its AMQP subscriber (watermill-amqp, over the same amqp091-go client we already use) owns the consume loop, reconnection and channel recovery. The retry middleware and our permanent/transient classification land with the follow-up retry ticket; until then every handler failure is nacked without requeue and parks immediately. Adoption is consume-only — no Watermill publisher, no CQRS or event-bus components. Our topology is untouched: the application keeps declaring every exchange, queue and binding, and Watermill consumes on the existing queues under pinned names.
 
 ## Context
 
@@ -18,8 +18,9 @@ The hand-written listener carried manual-ack bookkeeping correctly but was about
 ## Consequences
 
 - `watermill` and `watermill-amqp/v3` are added; `amqp091-go` remains a direct dependency because the topology declaration code still uses it.
-- Every ADR-0003 decision carries over — manual ack, three-attempt transient retry, poison parked immediately, one dead-letter exchange with per-queue dead-letter queues, application-declared topology. Only the mechanism behind them changes.
+- Every ADR-0003 decision carries over — manual ack, three-attempt transient retry, poison parked immediately, one dead-letter exchange with per-queue dead-letter queues, application-declared topology. Only the mechanism behind them changes; the retry bound and classification arrive with the follow-up ticket.
 - Reconnection and channel recovery are watermill-amqp's responsibility; the hand-rolled reconnect work is retired.
-- Handlers take Watermill messages; the hand-rolled delivery abstraction is deleted, and test messages are built with injected ack/nack behaviour.
-- Watermill's topic-to-queue name mapping is pinned by custom generators; a mismatch would fail against the durable queues rather than silently redeclare them, and the integration suite asserts the exact topology.
-- Watermill's logger adapter wraps our slog logger so consumption logs stay in one format.
+- Handlers no longer own acknowledgement — the router acks on success and nacks on error — so the hand-rolled delivery abstraction is deleted and test messages are built in one line with no fake.
+- A payload pass-through marshaler replaces the toolkit's default: only the payload is our contract, so a non-string header must never turn a valid event into poison.
+- Watermill's topic-to-queue name mapping is pinned by generators; a mismatch fails against the durable queues rather than silently redeclaring them, and the integration suite exercises the exact queue and dead-letter names end to end.
+- Watermill's logger adapter wraps our slog logger so consumption logs stay in one format. The router is cancellation-aware: cancelling its context stops consumption cleanly; wiring process signals to that cancellation remains a separate lifecycle concern.

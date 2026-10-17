@@ -1,11 +1,11 @@
 package messaging
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/domain"
@@ -21,8 +21,7 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 
 	handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
 
-	body := []byte(`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`)
-	err := handler.HandleMessage(context.Background(), testDelivery(string(body)))
+	err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`))
 
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -70,7 +69,7 @@ func TestInvoiceDueEventReminderWording(t *testing.T) {
 
 			handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
 
-			err := handler.HandleMessage(context.Background(), testDelivery(tt.payload))
+			err := handler.HandleMessage(testMessage(tt.payload))
 
 			require.NoError(t, err)
 			mockRepo.AssertExpectations(t)
@@ -99,7 +98,7 @@ func TestInvoiceDueEventInvalidPayloadIsPermanent(t *testing.T) {
 			mockRepo := new(mockTaskRepository)
 			handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
 
-			err := handler.HandleMessage(context.Background(), testDelivery(tt.payload))
+			err := handler.HandleMessage(testMessage(tt.payload))
 
 			require.Error(t, err)
 			require.True(t, IsPermanent(err), "expected a permanent failure, got: %v", err)
@@ -118,7 +117,7 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 		mockRepo := new(mockTaskRepository)
 		handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
 
-		err := handler.HandleMessage(context.Background(), testDelivery(payload))
+		err := handler.HandleMessage(testMessage(payload))
 
 		require.Error(t, err)
 		require.False(t, IsPermanent(err), "construction failures stay transient")
@@ -127,13 +126,16 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 	t.Run("persistence failure", func(t *testing.T) {
 		mockRepo := new(mockTaskRepository)
 		mockRepo.On("AddTaskToUser", mock.Anything, mock.Anything).
-			Return(domain.Task{}, errors.New("database unavailable"))
+			Return(domain.Task{}, fmt.Errorf("database unavailable"))
 		handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
 
-		err := handler.HandleMessage(context.Background(),
-			testDelivery(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01"}`))
+		err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01"}`))
 
 		require.Error(t, err)
 		require.False(t, IsPermanent(err), "persistence failures stay transient")
 	})
+}
+
+func testMessage(payload string) *message.Message {
+	return message.NewMessage("test-message-id", []byte(payload))
 }
