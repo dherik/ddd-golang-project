@@ -51,8 +51,21 @@ func (s *Server) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	deadLetterExchange := "todo-service.dead-letter"
+
+	if err := rabbitMQ.DeclareDeadLetterQueue(deadLetterExchange,
+		"todo-service.dead.billing.invoice-due", "invoice-due"); err != nil {
+		log.Fatalf("Failed to declare dead-letter queue: %v", err)
+	}
+	if err := rabbitMQ.DeclareDeadLetterQueue(deadLetterExchange,
+		"todo-service.dead.calendar.birthday", "birthday"); err != nil {
+		log.Fatalf("Failed to declare dead-letter queue: %v", err)
+	}
+
+	deadLetterArgs := rabbitmq.DeadLetterArgs(deadLetterExchange)
+
 	queueCalendar, err := rabbitMQ.DeclareQueueAndBind(
-		"todo-service.events.calendar.birthday", "calendar", "birthday")
+		"todo-service.events.calendar.birthday", "calendar", "birthday", deadLetterArgs)
 	if err != nil {
 		log.Fatalf("Failed to declare and bind RabbitMQ queue: %v", err)
 	}
@@ -65,7 +78,7 @@ func (s *Server) Start() {
 	}
 
 	queueInvoiceDue, err := rabbitMQ.DeclareQueueAndBind(
-		"todo-service.events.billing.invoice-due", "billing", "invoice-due")
+		"todo-service.events.billing.invoice-due", "billing", "invoice-due", deadLetterArgs)
 	if err != nil {
 		log.Fatalf("Failed to declare and bind RabbitMQ queue: %v", err)
 	}

@@ -1,6 +1,8 @@
 package setup
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -69,10 +71,52 @@ func PublishMessage(exchange, routingKey, payload string) error {
 	return nil
 }
 
+// readExecOutput drains a container exec output stream. The docker exec
+// stream frames stdout and stderr as repeated [type, 0, 0, 0, size] headers
+// followed by the payload; this concatenates the payloads in order.
 func readExecOutput(reader io.Reader) string {
-	out, err := io.ReadAll(reader)
-	if err != nil {
+	if reader == nil {
 		return ""
 	}
-	return string(out)
+
+	var out bytes.Buffer
+	header := make([]byte, 8)
+	for {
+		if _, err := io.ReadFull(reader, header); err != nil {
+			break
+		}
+		size := binary.BigEndian.Uint32(header[4:8])
+		if _, err := io.CopyN(&out, reader, int64(size)); err != nil {
+			break
+		}
+	}
+	return out.String()
+}
+
+// DeadLetteredPayloads returns the payloads currently parked in a queue, so
+// tests can assert a failed event was dead-lettered. The broker CLI's get
+// defaults to requeueing, so inspection does not drain the queue.
+func DeadLetteredPayloads(queueName string) ([]string, error) {
+	cmd := []string{"rabbitmqadmin", "-f", "pretty_json", "get", "queue=" + queueName}
+
+	exitCode, output, err := brokerContainer.Exec(brokerCtx, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("failed inspecting queue %s: %w", queueName, err)
+	}
+	if exitCode != 0 {
+		return nil, fmt.Errorf("failed inspecting queue %s, exit code %d: %s", queueName, exitCode, readExecOutput(output))
+	}
+
+	var messages []struct {
+		Payload string `json:"payload"`
+	}
+	if err := json.Unmarshal([]byte(readExecOutput(output)), &messages); err != nil {
+		return nil, fmt.Errorf("failed parsing inspect output for queue %s: %w", queueName, err)
+	}
+
+	payloads := make([]string, 0, len(messages))
+	for _, m := range messages {
+		payloads = append(payloads, m.Payload)
+	}
+	return payloads, nil
 }

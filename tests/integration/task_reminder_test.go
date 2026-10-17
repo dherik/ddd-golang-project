@@ -44,6 +44,44 @@ func (s *TaskTestSuite) TestInvoiceDueEventReminderOnlyForNamedUser() {
 	s.Nil(findTaskByDescription(s, otherToken, "Pay invoice INV-9 by 2026-11-01"))
 }
 
+func (s *TaskTestSuite) TestPoisonEventIsParkedAndConsumerStaysHealthy() {
+	poison := `{"invoiceId":"INV-BAD","userId":1}`
+	err := setup.PublishMessage("billing", "invoice-due", poison)
+	s.NoError(err)
+
+	waitForDeadLetter(s, "todo-service.dead.billing.invoice-due", poison)
+
+	// The parked event must never have become a task.
+	adminToken := setup.Login("admin", "some_password")
+	s.Nil(findTaskByDescription(s, adminToken, "Pay invoice INV-BAD by "))
+
+	err = setup.PublishMessage("billing", "invoice-due",
+		`{"invoiceId":"INV-OK","userId":1,"dueDate":"2026-11-01"}`)
+	s.NoError(err)
+	waitForPaymentReminder(s, adminToken, "Pay invoice INV-OK by 2026-11-01")
+}
+
+// waitForDeadLetter polls a dead-letter queue until a message with the given
+// payload is parked there, or fails the test after a deadline. Consumption is
+// asynchronous, so the park happens some time after the publish.
+func waitForDeadLetter(s *TaskTestSuite, queueName, payload string) {
+	s.T().Helper()
+
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		payloads, err := setup.DeadLetteredPayloads(queueName)
+		s.NoError(err)
+		for _, p := range payloads {
+			if p == payload {
+				return
+			}
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	s.T().Fatalf("payload %q was not parked in dead-letter queue %q within the deadline", payload, queueName)
+}
+
 // waitForPaymentReminder polls the task list until a task with the given
 // description appears, or fails the test after a deadline. Consumption is
 // asynchronous, so a single immediate read would race the listener.

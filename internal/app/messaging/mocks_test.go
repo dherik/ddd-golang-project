@@ -9,6 +9,32 @@ type mockTaskRepository struct {
 	mock.Mock
 }
 
+// fakeDelivery is a recording stand-in for a broker delivery, satisfying the
+// listener's acknowledgement interface without a broker.
+type fakeDelivery struct {
+	body        string
+	acked       bool
+	nacked      bool
+	nackRequeue bool
+}
+
+func (f fakeDelivery) Body() []byte { return []byte(f.body) }
+
+func (f *fakeDelivery) Ack(multiple bool) error {
+	f.acked = true
+	return nil
+}
+
+func (f *fakeDelivery) Nack(multiple, requeue bool) error {
+	f.nacked = true
+	f.nackRequeue = requeue
+	return nil
+}
+
+func testDelivery(body string) *fakeDelivery {
+	return &fakeDelivery{body: body}
+}
+
 func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Task, error) {
 	args := m.Called(id, userId)
 	return args.Get(0).(domain.Task), args.Error(1)

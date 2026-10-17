@@ -51,9 +51,9 @@ func NewRabbitMQ(url string) (*RabbitMQ, error) {
 	}, nil
 }
 
-func (r *RabbitMQ) DeclareQueueAndBind(queueName, exchange, routingKey string) (amqp.Queue, error) {
+func (r *RabbitMQ) DeclareQueueAndBind(queueName, exchange, routingKey string, args amqp.Table) (amqp.Queue, error) {
 
-	queue, err := r.DeclareQueue(queueName)
+	queue, err := r.DeclareQueue(queueName, args)
 	if err != nil {
 		return amqp.Queue{}, fmt.Errorf("failed to declare a queue %s: %w", queueName, err)
 	}
@@ -67,14 +67,54 @@ func (r *RabbitMQ) DeclareQueueAndBind(queueName, exchange, routingKey string) (
 	return queue, nil
 }
 
-func (r *RabbitMQ) DeclareQueue(queueName string) (amqp.Queue, error) {
+// DeclareDeadLetterQueue declares the dead-letter exchange, a dead-letter
+// queue, and the binding between them. Dead-lettered events are parked
+// there for inspection (see docs/adr/0003).
+func (r *RabbitMQ) DeclareDeadLetterQueue(exchange, queueName, routingKey string) error {
+	err := r.channel.ExchangeDeclare(
+		exchange,
+		amqp.ExchangeDirect,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to declare the dead-letter exchange %s: %w", exchange, err)
+	}
+
+	_, err = r.DeclareQueue(queueName, nil)
+	if err != nil {
+		return fmt.Errorf("failed to declare the dead-letter queue %s: %w", queueName, err)
+	}
+
+	if err := r.BindQueue(queueName, exchange, routingKey); err != nil {
+		return fmt.Errorf("failed to bind the dead-letter queue %s to the exchange %s with routing key %s: %w",
+			queueName, exchange, routingKey, err)
+	}
+
+	return nil
+}
+
+// DeadLetterArgs returns the queue arguments that route events nacked
+// without requeue to the given dead-letter exchange. The broker keeps the
+// original routing key, so each dead-letter queue binds with its work
+// queue's routing key.
+func DeadLetterArgs(deadLetterExchange string) amqp.Table {
+	return amqp.Table{
+		"x-dead-letter-exchange": deadLetterExchange,
+	}
+}
+
+func (r *RabbitMQ) DeclareQueue(queueName string, args amqp.Table) (amqp.Queue, error) {
 	return r.channel.QueueDeclare(
 		queueName,
 		true,
 		false,
 		false,
 		false,
-		nil,
+		args,
 	)
 }
 
@@ -92,7 +132,7 @@ func (r *RabbitMQ) Consume(queueName string) (<-chan amqp.Delivery, error) {
 	return r.channel.Consume(
 		queueName,
 		"",
-		true,
+		false,
 		false,
 		false,
 		false,

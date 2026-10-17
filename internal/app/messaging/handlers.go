@@ -11,13 +11,27 @@ import (
 	"strings"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
-
 	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
 const dateOnlyLayout = "2006-01-02"
+
+// Delivery is the slice of a broker delivery that handlers and the listener
+// rely on. The broker's own delivery type satisfies it; tests satisfy it
+// with a recording fake.
+type Delivery interface {
+	Body() []byte
+	Ack(multiple bool) error
+	Nack(multiple, requeue bool) error
+}
+
+// MessageHandler consumes one event. Failures must be classified: wrap a
+// failure that no retry can fix with Permanent; every other failure is
+// transient. The listener owns the acknowledgement decision.
+type MessageHandler interface {
+	HandleMessage(ctx context.Context, msg Delivery) error
+}
 
 // InvoiceDueEvent is the payload published by the external billing service
 // when an invoice belonging to a user must be paid by a due date. It is a
@@ -40,28 +54,23 @@ func NewInvoiceDueHandler(taskService *api.TaskService) *InvoiceDueHandler {
 	return &InvoiceDueHandler{TaskService: taskService}
 }
 
-func (h *InvoiceDueHandler) HandleMessage(ctx context.Context, msg amqp.Delivery) error {
+func (h *InvoiceDueHandler) HandleMessage(ctx context.Context, msg Delivery) error {
 	var event InvoiceDueEvent
-	if err := json.Unmarshal(msg.Body, &event); err != nil {
-		slog.Warn("discarding invoice due event with invalid payload", "err", err)
-		return nil
+	if err := json.Unmarshal(msg.Body(), &event); err != nil {
+		return Permanent(fmt.Errorf("invalid payload: %w", err))
 	}
 
 	if err := event.Validate(); err != nil {
-		slog.Warn("discarding invoice due event with invalid fields",
-			"err", err, "invoiceId", event.InvoiceID, "userId", event.UserID, "dueDate", event.DueDate)
-		return nil
+		return Permanent(fmt.Errorf("invalid fields: %w", err))
 	}
 
 	task, err := domain.NewTask(strconv.Itoa(event.UserID), event.ReminderDescription())
 	if err != nil {
-		slog.Error("failed building payment reminder task", "err", err)
-		return nil
+		return fmt.Errorf("unusable reminder: %w", err)
 	}
 
 	if err := h.TaskService.AddTaskToUser(task); err != nil {
-		slog.Error("failed persisting payment reminder task", "err", err)
-		return nil
+		return fmt.Errorf("failed persisting payment reminder task: %w", err)
 	}
 
 	slog.Info("created payment reminder task",
@@ -104,8 +113,8 @@ func (e InvoiceDueEvent) ReminderDescription() string {
 
 type CalendarHandler struct{}
 
-func (h *CalendarHandler) HandleMessage(ctx context.Context, msg amqp.Delivery) error {
-	log.Println("Received calendar message:", string(msg.Body))
+func (h *CalendarHandler) HandleMessage(ctx context.Context, msg Delivery) error {
+	log.Println("Received calendar message:", string(msg.Body()))
 	// Handle the message (e.g., parse JSON, update calendar, etc.)
 	return nil
 }
