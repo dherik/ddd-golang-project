@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
-	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
 
 var (
 	ErrUserAlreadyExists  = errors.New("a user with the same username already exists")
 	ErrEmailAlreadyExists = errors.New("a user with the same email already exists")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 type UserService struct {
@@ -23,52 +23,35 @@ func NewUserService(userRepository domain.UserRepository) *UserService {
 	}
 }
 
-func (s *UserService) login(username, password string) (domain.User, bool, error) {
+func (s *UserService) login(username, password string) (domain.User, error) {
 	user, err := s.userRepository.FindUserByUsername(username)
 	if err != nil {
-		return domain.User{}, false, fmt.Errorf("failed to login: %w", err)
-	}
-	return user, user.Password.CheckPasswordHash(password), nil
-}
-
-func (s *UserService) createUser(userRequest UserRequest) (domain.User, error) {
-	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password)
-	if err != nil {
-		return domain.User{}, fmt.Errorf("failed creating new user: %w", err)
-	}
-
-	if err := s.checkUserDoesNotExist(newUser); err != nil {
-		return domain.User{}, err
-	}
-
-	user, err := s.userRepository.Add(newUser)
-	if err != nil {
-		if errors.Is(err, persistence.ErrUsernameAlreadyExists) {
-			return domain.User{}, ErrUserAlreadyExists
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return domain.User{}, ErrInvalidCredentials
 		}
-		if errors.Is(err, persistence.ErrEmailAlreadyExists) {
-			return domain.User{}, ErrEmailAlreadyExists
-		}
-		return domain.User{}, fmt.Errorf("failed saving new user to repository: %w", err)
+		return domain.User{}, fmt.Errorf("failed to login: %w", err)
+	}
+	if !user.Password.CheckPasswordHash(password) {
+		return domain.User{}, ErrInvalidCredentials
 	}
 	return user, nil
 }
 
-func (s *UserService) checkUserDoesNotExist(user domain.User) error {
-	_, err := s.userRepository.FindUserByUsername(user.Username)
-	if err == nil {
-		return ErrUserAlreadyExists
-	}
-	if !errors.Is(err, persistence.ErrUserNotFound) {
-		return fmt.Errorf("failed checking username availability: %w", err)
+func (s *UserService) createUser(userRequest UserRequest) error {
+	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password)
+	if err != nil {
+		return fmt.Errorf("failed creating new user: %w", err)
 	}
 
-	_, err = s.userRepository.FindUserByEmail(user.Email)
-	if err == nil {
-		return ErrEmailAlreadyExists
-	}
-	if !errors.Is(err, persistence.ErrUserNotFound) {
-		return fmt.Errorf("failed checking email availability: %w", err)
+	if err := s.userRepository.Add(newUser); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUsernameAlreadyExists):
+			return ErrUserAlreadyExists
+		case errors.Is(err, domain.ErrEmailAlreadyExists):
+			return ErrEmailAlreadyExists
+		default:
+			return fmt.Errorf("failed saving new user to repository: %w", err)
+		}
 	}
 
 	return nil

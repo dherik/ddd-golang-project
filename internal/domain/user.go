@@ -8,6 +8,12 @@ import (
 	"unicode"
 )
 
+var (
+	ErrUserNotFound          = errors.New("the user was not found")
+	ErrUsernameAlreadyExists = errors.New("a user with the same username already exists")
+	ErrEmailAlreadyExists    = errors.New("a user with the same email already exists")
+)
+
 type User struct {
 	Id        int
 	Username  string
@@ -35,8 +41,7 @@ func (u *User) Validate() error {
 
 type UserRepository interface {
 	FindUserByUsername(username string) (User, error)
-	FindUserByEmail(email string) (User, error)
-	Add(user User) (User, error)
+	Add(user User) error
 }
 
 func NewUser(username, email, plainPassword string) (User, error) {

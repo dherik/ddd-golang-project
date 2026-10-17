@@ -301,7 +301,7 @@ Errors use a consistent JSON body:
 | `200` | Request succeeded |
 | `201` | Resource created |
 | `400` | Invalid payload, query parameter, or path parameter |
-| `401` | Missing, invalid, or expired token |
+| `401` | Missing, invalid, or expired token, or invalid credentials |
 | `404` | Resource not found (or not owned by the authenticated user) |
 | `409` | Duplicate username or email |
 | `500` | Unexpected server error |

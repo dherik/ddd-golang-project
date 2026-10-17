@@ -23,7 +23,7 @@ func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) error {
 		return NewHTTPError(http.StatusBadRequest, "failed to create the user")
 	}
 
-	_, err := h.UserService.createUser(u)
+	err := h.UserService.createUser(u)
 	if err != nil {
 		if errors.Is(err, ErrUserAlreadyExists) || errors.Is(err, ErrEmailAlreadyExists) {
 			return NewHTTPError(http.StatusConflict, err.Error())

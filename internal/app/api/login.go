@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -33,15 +32,12 @@ func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
 		return NewHTTPError(http.StatusBadRequest, "username or password is empty")
 	}
 
-	user, authorized, err := h.UserService.login(creds.Username, creds.Password)
+	user, err := h.UserService.login(creds.Username, creds.Password)
 	if err != nil {
-		if errors.Is(err, persistence.ErrUserNotFound) {
-			return NewHTTPError(http.StatusUnauthorized, "user not found")
+		if errors.Is(err, ErrInvalidCredentials) {
+			return NewHTTPError(http.StatusUnauthorized, "invalid credentials")
 		}
 		return NewHTTPError(http.StatusInternalServerError, "failed to login")
-	}
-	if !authorized {
-		return ErrUnauthorized
 	}
 
 	now := time.Now().UTC()

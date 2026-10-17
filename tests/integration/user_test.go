@@ -14,10 +14,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-//TODO try to access protect endpoint not authenticated test
-//TODO try to access protect endpoint authenticated test
-//TODO create user and login test
-
 type UserTestSuite struct {
 	suite.Suite
 }
@@ -33,14 +29,18 @@ func (s *UserTestSuite) TestLoginSuccess() {
 
 func (s *UserTestSuite) TestLoginUnauthorizedWhenUserNotFound() {
 
-	response, _ := login("non_existent_user", "some_password")
+	response, body, _ := login("non_existent_user", "some_password")
+
 	s.Equal(http.StatusUnauthorized, response.StatusCode)
+	s.assertErrorMessage(body, http.StatusUnauthorized, "invalid credentials")
 }
 
 func (s *UserTestSuite) TestLoginUnauthorizedWhenPasswordIsWrong() {
 
-	response, _ := login("admin", "some_wrong_password")
+	response, body, _ := login("admin", "some_wrong_password")
+
 	s.Equal(http.StatusUnauthorized, response.StatusCode)
+	s.assertErrorMessage(body, http.StatusUnauthorized, "invalid credentials")
 }
 
 func (s *UserTestSuite) TestAddUser() {
@@ -64,23 +64,52 @@ func (s *UserTestSuite) TestAddUser() {
 
 }
 
+func (s *UserTestSuite) TestAddUserThenLogin() {
+
+	token := setup.Login("admin", "some_password")
+
+	payload := api.UserRequest{
+		Username: "login_user",
+		Email:    "login_user@example.com",
+		Password: "_1SomeValidPassword",
+	}
+
+	response := addUser(s.T(), payload, token)
+	s.Equal(http.StatusCreated, response.StatusCode)
+	response.Body.Close()
+
+	loginResponse, body, err := login(payload.Username, payload.Password)
+	s.NoError(err)
+	s.Equal(http.StatusOK, loginResponse.StatusCode)
+
+	var tokenResponse setup.TokenResponse
+	s.NoError(json.Unmarshal(body, &tokenResponse))
+	s.NotEmpty(tokenResponse.Token)
+}
+
 func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
 
 	token := setup.Login("admin", "some_password")
 
 	payload := api.UserRequest{
-		Username: "some_user",
-		Email:    "some_user@example.com",
+		Username: "duplicate_username_user",
+		Email:    "duplicate_username_user@example.com",
 		Password: "_1SomeValidPassword",
 	}
 
-	addUser(s.T(), payload, token)
+	first := addUser(s.T(), payload, token)
+	s.Equal(http.StatusCreated, first.StatusCode)
+	first.Body.Close()
 
-	// add same user again
+	payload.Email = "some_other_user@example.com"
 	response := addUser(s.T(), payload, token)
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	s.NoError(err)
 
 	s.Equal(http.StatusConflict, response.StatusCode)
-
+	s.assertErrorMessage(body, http.StatusConflict, "a user with the same username already exists")
 }
 
 func (s *UserTestSuite) TestAddUserWhenEmailAlreadyExists() {
@@ -94,9 +123,27 @@ func (s *UserTestSuite) TestAddUserWhenEmailAlreadyExists() {
 	}
 
 	response := addUser(s.T(), payload, token)
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	s.NoError(err)
 
 	s.Equal(http.StatusConflict, response.StatusCode)
+	s.assertErrorMessage(body, http.StatusConflict, "a user with the same email already exists")
+}
 
+func (s *UserTestSuite) assertErrorMessage(body []byte, code int, message string) {
+	s.T().Helper()
+
+	var payload struct {
+		Error struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	s.Require().NoError(json.Unmarshal(body, &payload))
+	s.Equal(code, payload.Error.Code)
+	s.Equal(message, payload.Error.Message)
 }
 
 func addUser(t *testing.T, payload api.UserRequest, token string) *http.Response {
@@ -124,7 +171,7 @@ func addUser(t *testing.T, payload api.UserRequest, token string) *http.Response
 	return response
 }
 
-func login(username, password string) (*http.Response, error) {
+func login(username, password string) (*http.Response, []byte, error) {
 	creds := api.Credentials{
 		Username: username,
 		Password: password,
@@ -149,5 +196,10 @@ func login(username, password string) (*http.Response, error) {
 	}
 	defer resp.Body.Close()
 
-	return resp, err
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return resp, nil, readErr
+	}
+
+	return resp, body, err
 }
