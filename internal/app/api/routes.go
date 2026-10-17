@@ -96,6 +96,9 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 }
 
 func customHTTPErrorHandler(err error, c echo.Context) {
+	// Echo invokes this handler again for errors that RequestLogger already
+	// handled (it is configured with HandleError), so a committed response
+	// must not be written twice.
 	if c.Response().Committed {
 		return
 	}

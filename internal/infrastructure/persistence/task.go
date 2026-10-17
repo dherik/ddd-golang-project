@@ -43,13 +43,6 @@ func toTaskDomain(taskDb Task) domain.Task {
 }
 
 func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
-	if query.PageSize < 1 {
-		return domain.TaskPage{}, fmt.Errorf("page size must be at least 1")
-	}
-	if query.Offset < 0 {
-		return domain.TaskPage{}, fmt.Errorf("offset must not be negative")
-	}
-
 	db := r.pgsql.connect()
 
 	// Fetch one row beyond the page so HasMore is known without a COUNT.

@@ -18,6 +18,9 @@ type TaskHandler struct {
 const (
 	defaultTaskPageSize = 20
 	maxTaskPageSize     = 100
+	// maxPageOffset is the largest representable offset. Anything above it is
+	// treated as past the end of every list rather than as malformed input.
+	maxPageOffset = int(^uint(0) >> 1)
 )
 
 func NewTaskHandler(taskService *TaskService) TaskHandler {
@@ -55,11 +58,11 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 		PageSize:  limit,
 		Offset:    offset,
 	}
-	tasks, err := h.TaskService.FindTasks(query)
+	page, err := h.TaskService.FindTasks(query)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed finding tasks")
 	}
-	return c.JSONPretty(http.StatusOK, tasks, "")
+	return c.JSONPretty(http.StatusOK, page, "")
 }
 
 func (h *TaskHandler) getTaskByID(c echo.Context) error {
@@ -138,12 +141,12 @@ func parseTaskPageOffset(raw string) (int, bool) {
 	if raw == "" {
 		return 0, true
 	}
-	offset, err := strconv.ParseUint(raw, 10, 63)
+	offset, err := strconv.ParseUint(raw, 10, strconv.IntSize)
 	if err != nil {
 		// A number too large for an int is still a valid offset: it is simply
 		// beyond any page, so treat it as past the end instead of malformed.
 		if errors.Is(err, strconv.ErrRange) {
-			return int(^uint(0) >> 1), true
+			return maxPageOffset, true
 		}
 		return 0, false
 	}
