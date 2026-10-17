@@ -22,6 +22,11 @@ func NewTaskHandler(taskService *TaskService) TaskHandler {
 }
 
 func (h *TaskHandler) getTasks(c echo.Context) error {
+	userId, err := authenticatedUserID(c)
+	if err != nil {
+		return err
+	}
+
 	startDateParam := c.QueryParam("startDate")
 	endDateParam := c.QueryParam("endDate")
 	startDate, err := time.Parse(time.RFC3339, startDateParam)
@@ -32,7 +37,7 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid end date")
 	}
-	tasks, err := h.TaskService.FindTasks(startDate, endDate)
+	tasks, err := h.TaskService.FindTasks(userId, startDate, endDate)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed finding tasks")
 	}
@@ -40,12 +45,17 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 }
 
 func (h *TaskHandler) getTaskByID(c echo.Context) error {
+	userId, err := authenticatedUserID(c)
+	if err != nil {
+		return err
+	}
+
 	slog.Info("get task by id")
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
-	task, err := h.TaskService.GetTasksByID(id)
+	task, err := h.TaskService.GetTaskByID(userId, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrTaskNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, "task not found")
@@ -56,14 +66,20 @@ func (h *TaskHandler) getTaskByID(c echo.Context) error {
 }
 
 func (h *TaskHandler) createTask(c echo.Context) error {
-	slog.Info("add new task for user")
+	userId, err := authenticatedUserID(c)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("add new task for user", "userId", userId)
 	t := TaskRequest{}
 	if err := c.Bind(&t); err != nil {
 		slog.Error("failed binding body to task request struct", "err", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
 	}
 
-	task, err := domain.NewTask(t.UserId, t.Description)
+	// The authenticated user always owns the new task.
+	task, err := domain.NewTask(userId, t.Description)
 	if err != nil {
 		slog.Error("invalid task data", "err", err)
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())

@@ -31,21 +31,21 @@ func (s *TaskService) AddTaskToUser(task domain.Task) error {
 	return nil
 }
 
-func (s *TaskService) FindTasks(startDate time.Time, endDate time.Time) ([]TaskResponse, error) {
-	slog.Info("find tasks between dates", "startDate", startDate, "endDate", endDate)
-	tasks, err := s.taskRepository.FindTasks(startDate, endDate)
+func (s *TaskService) FindTasks(userId string, startDate time.Time, endDate time.Time) ([]TaskResponse, error) {
+	slog.Info("find tasks between dates", "userId", userId, "startDate", startDate, "endDate", endDate)
+	tasks, err := s.taskRepository.FindTasks(userId, startDate, endDate)
 	if err != nil {
 		return []TaskResponse{}, fmt.Errorf("failed finding tasks: %w", err)
 	}
 	return toResponseArray(tasks), nil
 }
 
-func (s *TaskService) GetTasksByID(id int) (TaskResponse, error) {
-	task, err := s.taskRepository.GetByID(id)
+func (s *TaskService) GetTaskByID(userId string, id int) (TaskResponse, error) {
+	task, err := s.taskRepository.GetByIDAndUserID(id, userId)
 	if err != nil {
-		return TaskResponse{}, fmt.Errorf("failed getting user by id: %w", err)
+		return TaskResponse{}, fmt.Errorf("failed getting task by id: %w", err)
 	}
-	slog.Info("found task", "id", id)
+	slog.Info("found task", "id", id, "userId", userId)
 	return toResponse(task), nil
 }
 
@@ -96,6 +96,12 @@ func (s *UserService) createUser(userRequest UserRequest) (domain.User, error) {
 
 	user, err := s.userRepository.Add(newUser)
 	if err != nil {
+		if errors.Is(err, persistence.ErrUsernameAlreadyExists) {
+			return domain.User{}, ErrUserAlreadyExists
+		}
+		if errors.Is(err, persistence.ErrEmailAlreadyExists) {
+			return domain.User{}, ErrEmailAlreadyExists
+		}
 		return domain.User{}, fmt.Errorf("failed saving new user to repository: %w", err)
 	}
 	return user, nil

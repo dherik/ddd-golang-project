@@ -34,7 +34,6 @@ export function login() {
 export function createTask(authToken) {
   const url = `${BASE_URL}/tasks`;
   const payload = JSON.stringify({
-    userId: '1',
     description: 'Task 1'
   });
   const params = {

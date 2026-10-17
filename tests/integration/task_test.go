@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
-	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -49,12 +48,6 @@ func (s *TaskTestSuite) TestGetByDate() {
 		  "description": "Complete project proposal",
 		  "userId": "1",
 		  "createdAt": "2024-02-15T10:59:01.054Z"
-		},
-		{
-		  "id": 2,
-		  "description": "Review code for bug fixes",
-		  "userId": "2",
-		  "createdAt": "2024-02-16T21:23:09.066Z"
 		}
 	  ]`, string(byteBody))
 
@@ -92,7 +85,6 @@ func (s *TaskTestSuite) TestAddTask() {
 	token := setup.Login("admin", "some_password")
 
 	payload := api.TaskRequest{
-		UserId:      "1",
 		Description: "Hello, World!",
 	}
 
@@ -109,7 +101,7 @@ func (s *TaskTestSuite) TestAddTask() {
 
 }
 
-func addTask(s *TaskTestSuite, payload api.TaskRequest, token string) *http.Response {
+func addTask(s *TaskTestSuite, payload interface{}, token string) *http.Response {
 	s.T().Helper()
 	requestBody, err := json.Marshal(payload)
 	if err != nil {
@@ -134,8 +126,7 @@ func (s *TaskTestSuite) TestCannotAddTaskWhenDescriptionEmpty() {
 
 	token := setup.Login("admin", "some_password")
 
-	payload := domain.Task{
-		UserId:      "1",
+	payload := api.TaskRequest{
 		Description: "",
 	}
 
@@ -165,4 +156,116 @@ func (s *TaskTestSuite) TestCannotAddTaskWhenDescriptionEmpty() {
 
 	response.Body.Close()
 
+}
+
+func getTask(s *TaskTestSuite, id int, token string) *http.Response {
+	s.T().Helper()
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/tasks/%d", 3333, id), nil)
+	s.NoError(err)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := http.Client{}
+	response, err := client.Do(req)
+	s.NoError(err)
+	return response
+}
+
+func (s *TaskTestSuite) TestCannotGetTaskFromAnotherUser() {
+
+	token := setup.Login("admin", "some_password")
+
+	response := getTask(s, 2, token)
+	s.Equal(http.StatusNotFound, response.StatusCode)
+
+	response.Body.Close()
+}
+
+func (s *TaskTestSuite) TestUserOnlySeesOwnTasks() {
+
+	token := setup.Login("john_doe", "some_password")
+
+	response := getTask(s, 2, token)
+	s.Equal(http.StatusOK, response.StatusCode)
+
+	byteBody, err := io.ReadAll(response.Body)
+	s.NoError(err)
+	require.JSONEq(s.T(), `{
+		  "id": 2,
+		  "description": "Review code for bug fixes",
+		  "userId": "2",
+		  "createdAt": "2024-02-16T21:23:09.066Z"
+		}`, string(byteBody))
+	response.Body.Close()
+
+	response = getTask(s, 1, token)
+	s.Equal(http.StatusNotFound, response.StatusCode)
+	response.Body.Close()
+
+	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
+	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
+	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	s.NoError(err)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := http.Client{}
+	listResponse, err := client.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusOK, listResponse.StatusCode)
+
+	listBody, err := io.ReadAll(listResponse.Body)
+	s.NoError(err)
+	listResponse.Body.Close()
+
+	require.JSONEq(s.T(), `[
+		{
+		  "id": 2,
+		  "description": "Review code for bug fixes",
+		  "userId": "2",
+		  "createdAt": "2024-02-16T21:23:09.066Z"
+		}
+	  ]`, string(listBody))
+}
+
+func (s *TaskTestSuite) TestCreateTaskIgnoresUserIdFromBody() {
+
+	token := setup.Login("admin", "some_password")
+
+	payload := map[string]string{
+		"userId":      "2",
+		"description": "Owned by admin",
+	}
+
+	response := addTask(s, payload, token)
+	s.Equal(http.StatusCreated, response.StatusCode)
+	response.Body.Close()
+
+	startDate := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+	endDate := time.Now().UTC().Add(time.Hour).Format(time.RFC3339)
+	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	s.NoError(err)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := http.Client{}
+	listResponse, err := client.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusOK, listResponse.StatusCode)
+
+	listBody, err := io.ReadAll(listResponse.Body)
+	s.NoError(err)
+	listResponse.Body.Close()
+
+	var tasks []api.TaskResponse
+	s.NoError(json.Unmarshal(listBody, &tasks))
+
+	found := false
+	for _, task := range tasks {
+		if task.Description == "Owned by admin" {
+			found = true
+			s.Equal("1", task.UserId)
+		}
+	}
+	s.True(found)
 }

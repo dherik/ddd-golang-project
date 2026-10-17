@@ -97,3 +97,27 @@ func TestUserServiceCreateUserRepositoryErrorIsNotConflict(t *testing.T) {
 	assert.NotErrorIs(t, err, ErrUserAlreadyExists)
 	assert.NotErrorIs(t, err, ErrEmailAlreadyExists)
 }
+
+func TestUserServiceCreateUserUsernameConflictOnInsert(t *testing.T) {
+	repo := &fakeUserRepository{
+		add: func(user domain.User) (domain.User, error) {
+			return domain.User{}, persistence.ErrUsernameAlreadyExists
+		},
+	}
+
+	_, err := NewUserService(repo).createUser(validUserRequest())
+
+	assert.ErrorIs(t, err, ErrUserAlreadyExists)
+}
+
+func TestUserServiceCreateUserEmailConflictOnInsert(t *testing.T) {
+	repo := &fakeUserRepository{
+		add: func(user domain.User) (domain.User, error) {
+			return domain.User{}, persistence.ErrEmailAlreadyExists
+		},
+	}
+
+	_, err := NewUserService(repo).createUser(validUserRequest())
+
+	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+}

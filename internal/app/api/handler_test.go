@@ -4,14 +4,24 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+func withAuthenticatedUser(c echo.Context, userID int) echo.Context {
+	c.Set(userContextKey, &jwt.Token{
+		Claims: &jwtCustomClaims{UserID: userID},
+	})
+	return c
+}
 
 func TestTaskHandler_GetTasks(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -19,7 +29,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	now := time.Now().UTC()
 
 	mockRepo := new(mockTaskRepository)
-	mockRepo.On("FindTasks", start, end).Return([]domain.Task{
+	mockRepo.On("FindTasks", "1", start, end).Return([]domain.Task{
 		{Id: 1, UserId: "1", Description: "Task 1", CreatedAt: now},
 	}, nil)
 
@@ -29,7 +39,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	c := withAuthenticatedUser(e.NewContext(req, rec), 1)
 
 	err := handler.getTasks(c)
 	require.NoError(t, err)
@@ -53,7 +63,7 @@ func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=invalid&endDate=2024-12-31T00:00:00Z", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	c := withAuthenticatedUser(e.NewContext(req, rec), 1)
 
 	err := handler.getTasks(c)
 
@@ -64,11 +74,29 @@ func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 	assert.Equal(t, "invalid start date", httpErr.Message)
 }
 
+func TestTaskHandler_GetTasks_UnauthorizedWithoutClaims(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	svc := NewTaskService(mockRepo)
+	handler := NewTaskHandler(svc)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := handler.getTasks(c)
+
+	require.Error(t, err)
+	httpErr, ok := err.(*echo.HTTPError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusUnauthorized, httpErr.Code)
+}
+
 func TestTaskHandler_GetTaskByID(t *testing.T) {
 	now := time.Now().UTC()
 
 	mockRepo := new(mockTaskRepository)
-	mockRepo.On("GetByID", 42).Return(domain.Task{
+	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{
 		Id: 42, UserId: "1", Description: "Task 42", CreatedAt: now,
 	}, nil)
 
@@ -81,6 +109,7 @@ func TestTaskHandler_GetTaskByID(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
 	c.SetParamValues("42")
+	c = withAuthenticatedUser(c, 1)
 
 	err := handler.getTaskByID(c)
 	require.NoError(t, err)
@@ -97,7 +126,7 @@ func TestTaskHandler_GetTaskByID(t *testing.T) {
 
 func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
-	mockRepo.On("GetByID", 42).Return(domain.Task{}, domain.ErrTaskNotFound)
+	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{}, domain.ErrTaskNotFound)
 
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
@@ -108,6 +137,7 @@ func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
 	c.SetParamValues("42")
+	c = withAuthenticatedUser(c, 1)
 
 	err := handler.getTaskByID(c)
 
@@ -115,6 +145,30 @@ func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
 	httpErr, ok := err.(*echo.HTTPError)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusNotFound, httpErr.Code)
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestTaskHandler_CreateTaskIgnoresUserIdFromBody(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
+		return task.UserId == "1" && task.Description == "Task from token"
+	})).Return(domain.Task{}, nil)
+
+	svc := NewTaskService(mockRepo)
+	handler := NewTaskHandler(svc)
+
+	e := echo.New()
+	body := strings.NewReader(`{"userId":"2","description":"Task from token"}`)
+	req := httptest.NewRequest(http.MethodPost, "/tasks", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := withAuthenticatedUser(e.NewContext(req, rec), 1)
+
+	err := handler.createTask(c)
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, rec.Code)
 
 	mockRepo.AssertExpectations(t)
 }

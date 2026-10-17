@@ -42,11 +42,11 @@ func toTaskDomain(taskDb Task) domain.Task {
 	}
 }
 
-func (r *TaskSqlRepository) FindTasks(startDate time.Time, endDate time.Time) ([]domain.Task, error) {
+func (r *TaskSqlRepository) FindTasks(userId string, startDate time.Time, endDate time.Time) ([]domain.Task, error) {
 	db := r.pgsql.connect()
 
-	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task 
-		where created_at >= $1 AND created_at <= $2`, startDate, endDate)
+	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task
+		where user_id = $1 AND created_at >= $2 AND created_at <= $3`, userId, startDate, endDate)
 	if err != nil {
 		return []domain.Task{}, fmt.Errorf("failed to execute query: %w", err)
 	}
@@ -61,6 +61,9 @@ func (r *TaskSqlRepository) FindTasks(startDate time.Time, endDate time.Time) ([
 		}
 		tasks = append(tasks, task)
 	}
+	if err := rows.Err(); err != nil {
+		return []domain.Task{}, fmt.Errorf("failed iterating rows: %w", err)
+	}
 
 	return toTaskDomainList(tasks), nil
 }
@@ -70,12 +73,12 @@ func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (doma
 
 	var id int
 	err := db.QueryRow(`INSERT INTO task(user_id, description, created_at)
-		VALUES($1, $2, $3) RETURNING id`, task.UserId, task.Description, task.CreatedAt).Scan(&id)
+		VALUES($1, $2, $3) RETURNING id`, userId, task.Description, task.CreatedAt).Scan(&id)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("failed to execute query: %w", err)
 	}
 
-	taskEntity, err := r.GetByID(id)
+	taskEntity, err := r.GetByIDAndUserID(id, userId)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("failed to retrieve created task: %w", err)
 	}
@@ -105,12 +108,12 @@ func (r *TaskSqlRepository) GetByUserID(userId string) ([]domain.Task, error) {
 	return toTaskDomainList(tasks), nil
 }
 
-func (r *TaskSqlRepository) GetByID(id int) (domain.Task, error) {
+func (r *TaskSqlRepository) GetByIDAndUserID(id int, userId string) (domain.Task, error) {
 	db := r.pgsql.connect()
 
 	var task Task
-	err := db.QueryRow(`SELECT id, user_id, description, created_at FROM task 
-		where id = $1`, id).Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
+	err := db.QueryRow(`SELECT id, user_id, description, created_at FROM task
+		where id = $1 AND user_id = $2`, id, userId).Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Task{}, domain.ErrTaskNotFound

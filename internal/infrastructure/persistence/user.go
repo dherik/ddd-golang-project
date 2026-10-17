@@ -7,9 +7,14 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
+	"github.com/lib/pq"
 )
 
-var ErrUserNotFound = errors.New("the user was not found")
+var (
+	ErrUserNotFound          = errors.New("the user was not found")
+	ErrUsernameAlreadyExists = errors.New("a user with the same username already exists")
+	ErrEmailAlreadyExists    = errors.New("a user with the same email already exists")
+)
 
 type User struct {
 	Id        int       `db:"id"`
@@ -49,6 +54,15 @@ func (r *UserSqlRepository) Add(user domain.User) (domain.User, error) {
 	err := db.QueryRow(`INSERT INTO users(username, email, password, created_at)
 		VALUES($1, $2, $3, $4) RETURNING id`, user.Username, user.Email, user.Password.HashPassword, user.CreatedAt).Scan(&id)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			switch pqErr.Constraint {
+			case "unique_username":
+				return domain.User{}, ErrUsernameAlreadyExists
+			case "unique_email":
+				return domain.User{}, ErrEmailAlreadyExists
+			}
+		}
 		return domain.User{}, fmt.Errorf("failed to execute insert query: %w", err)
 	}
 

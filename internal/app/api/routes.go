@@ -20,7 +20,6 @@ type TaskResponse struct {
 
 type TaskRequest struct {
 	Description string `json:"description"`
-	UserId      string `json:"userId"`
 }
 
 type UserRequest struct {
@@ -68,7 +67,8 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
 		},
-		SigningKey: []byte(r.JWTSecret), //FIXME read from config
+		SigningKey: []byte(r.JWTSecret),
+		ContextKey: userContextKey,
 	}
 
 	userGroup := e.Group("/users")
@@ -79,10 +79,10 @@ func (r *Routes) SetupRoutes(e *echo.Echo) {
 	taskGroup := e.Group("/tasks")
 	taskGroup.Use(echojwt.WithConfig(config))
 	taskGroup.GET("", r.TaskHandler.getTasks)
-	taskGroup.GET("/:id", r.TaskHandler.getTaskByID) //FIXME using by user id
+	taskGroup.GET("/:id", r.TaskHandler.getTaskByID)
 	taskGroup.POST("", r.TaskHandler.createTask)
 
-	e.POST("/login", r.LoginHandler.login) //FIXME returning error 500 if user does not exist
+	e.POST("/login", r.LoginHandler.login)
 
 	e.GET("/api/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Ok")

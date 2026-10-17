@@ -83,17 +83,21 @@ func (s *UserTestSuite) TestAddUserWhenUserAlreadyExists() {
 
 }
 
-// func (s *UserTestSuite) TestCannotAccessTaskFromAnotherUser() {
+func (s *UserTestSuite) TestAddUserWhenEmailAlreadyExists() {
 
-// 	token := setup.Login("admin", "some_password")
+	token := setup.Login("admin", "some_password")
 
-// 	task1 := api.TaskRequest{
-// 		UserId:      "1",
-// 		Description: "Hello, World!",
-// 	}
-// 	addTask(s.T(), task1, token)
+	payload := api.UserRequest{
+		Username: "another_user",
+		Email:    "admin@example.com",
+		Password: "_1SomeValidPassword",
+	}
 
-// }
+	response := addUser(s.T(), payload, token)
+
+	s.Equal(http.StatusConflict, response.StatusCode)
+
+}
 
 func addUser(t *testing.T, payload api.UserRequest, token string) *http.Response {
 	t.Helper()
@@ -146,17 +150,4 @@ func login(username, password string) (*http.Response, error) {
 	defer resp.Body.Close()
 
 	return resp, err
-
-	// if resp.StatusCode == http.StatusOK {
-	// 	var tokenResponse TokenResponse
-	// 	err := json.Unmarshal(responseBody, &tokenResponse)
-	// 	if err != nil {
-	// 		log.Fatalf("failed unmarhalling login response body: %s", err.Error())
-	// 	}
-	// 	return tokenResponse.Token
-	// }
-
-	// log.Fatalf("login failed. Status code: %d, Response: %s", resp.StatusCode, string(responseBody))
-
-	// return ""
 }

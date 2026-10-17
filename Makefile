@@ -25,11 +25,10 @@ upgrade-deps-latest-patch:
 	go mod tidy
 
 vulnerability-check:
-	$(GOINSTALL) golang.org/x/vuln/cmd/govulncheck@latest
-	govulncheck ./...
+	GOTOOLCHAIN=go1.27.2 $(GOCMD) run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 dependency:
-	$(GOGET) -v ./...
+	$(GOCMD) mod download
 
 unit-test: dependency
 	$(GOTEST) -v -short ./...
