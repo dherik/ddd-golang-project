@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
@@ -13,63 +12,6 @@ var (
 	ErrUserAlreadyExists  = errors.New("a user with the same username already exists")
 	ErrEmailAlreadyExists = errors.New("a user with the same email already exists")
 )
-
-type TaskService struct {
-	taskRepository domain.TaskRepository
-}
-
-func NewTaskService(taskRepository domain.TaskRepository) *TaskService {
-	return &TaskService{taskRepository: taskRepository}
-}
-
-func (s *TaskService) AddTaskToUser(task domain.Task) error {
-	_, err := s.taskRepository.AddTaskToUser(task.UserId, task)
-	if err != nil {
-		return fmt.Errorf("failed to add task to user: %w", err)
-	}
-	return nil
-}
-
-func (s *TaskService) FindTasks(query domain.TaskQuery) (TasksResponse, error) {
-	slog.Info("find task page",
-		"userId", query.UserId,
-		"startDate", query.StartDate,
-		"endDate", query.EndDate,
-		"pageSize", query.PageSize,
-		"offset", query.Offset,
-	)
-	page, err := s.taskRepository.FindTasks(query)
-	if err != nil {
-		return TasksResponse{}, fmt.Errorf("failed finding tasks: %w", err)
-	}
-	return TasksResponse{Items: toResponseArray(page.Tasks), HasMore: page.HasMore}, nil
-}
-
-func (s *TaskService) GetTaskByID(userId string, id int) (TaskResponse, error) {
-	task, err := s.taskRepository.GetByIDAndUserID(id, userId)
-	if err != nil {
-		return TaskResponse{}, fmt.Errorf("failed getting task by id: %w", err)
-	}
-	slog.Info("found task", "id", id, "userId", userId)
-	return toResponse(task), nil
-}
-
-func toResponseArray(tasks []domain.Task) []TaskResponse {
-	taskResponses := make([]TaskResponse, 0, len(tasks))
-	for _, task := range tasks {
-		taskResponses = append(taskResponses, toResponse(task))
-	}
-	return taskResponses
-}
-
-func toResponse(task domain.Task) TaskResponse {
-	return TaskResponse{
-		Id:          task.Id,
-		UserId:      task.UserId,
-		Description: task.Description,
-		CreatedAt:   task.CreatedAt,
-	}
-}
 
 type UserService struct {
 	userRepository domain.UserRepository

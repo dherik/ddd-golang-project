@@ -12,7 +12,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/dherik/ddd-golang-project/internal/app/api"
+	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
@@ -32,10 +32,10 @@ type InvoiceDueEvent struct {
 }
 
 type InvoiceDueHandler struct {
-	TaskService *api.TaskService
+	TaskService *task.Service
 }
 
-func NewInvoiceDueHandler(taskService *api.TaskService) *InvoiceDueHandler {
+func NewInvoiceDueHandler(taskService *task.Service) *InvoiceDueHandler {
 	return &InvoiceDueHandler{TaskService: taskService}
 }
 

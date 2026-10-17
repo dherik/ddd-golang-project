@@ -13,6 +13,7 @@ import (
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/app/messaging"
+	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 )
@@ -35,7 +36,7 @@ func (s *Server) Start() {
 	}
 	taskRepository := persistence.NewTaskRepository(pgsql)
 	userRepository := persistence.NewUserRepository(pgsql)
-	taskService := api.NewTaskService(taskRepository)
+	taskService := task.NewService(taskRepository)
 	userService := api.NewUserService(userRepository)
 	taskHandler := api.NewTaskHandler(taskService)
 	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)

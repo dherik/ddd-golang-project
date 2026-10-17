@@ -9,11 +9,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type mockTaskRepository struct {
+	mock.Mock
+}
+
+func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Task, error) {
+	args := m.Called(id, userId)
+	return args.Get(0).(domain.Task), args.Error(1)
+}
+
+func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) error {
+	return m.Called(userId, task).Error(0)
+}
+
+func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
+	args := m.Called(query)
+	return args.Get(0).(domain.TaskPage), args.Error(1)
+}
 
 func withAuthenticatedUser(r *http.Request, userID int) *http.Request {
 	claims := &jwtCustomClaims{UserID: userID}
@@ -39,7 +58,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 		HasMore: false,
 	}, nil)
 
-	svc := NewTaskService(mockRepo)
+	svc := task.NewService(mockRepo)
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
@@ -63,7 +82,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 
 func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
-	svc := NewTaskService(mockRepo)
+	svc := task.NewService(mockRepo)
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=invalid&endDate=2024-12-31T00:00:00Z", nil)
@@ -81,7 +100,7 @@ func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 
 func TestTaskHandler_GetTasks_UnauthorizedWithoutClaims(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
-	svc := NewTaskService(mockRepo)
+	svc := task.NewService(mockRepo)
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
@@ -104,7 +123,7 @@ func TestTaskHandler_GetTaskByID(t *testing.T) {
 		Id: 42, UserId: "1", Description: "Task 42", CreatedAt: now,
 	}, nil)
 
-	svc := NewTaskService(mockRepo)
+	svc := task.NewService(mockRepo)
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
@@ -129,7 +148,7 @@ func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{}, domain.ErrTaskNotFound)
 
-	svc := NewTaskService(mockRepo)
+	svc := task.NewService(mockRepo)
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
@@ -151,9 +170,9 @@ func TestTaskHandler_CreateTaskIgnoresUserIdFromBody(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
 		return task.UserId == "1" && task.Description == "Task from token"
-	})).Return(domain.Task{}, nil)
+	})).Return(nil)
 
-	svc := NewTaskService(mockRepo)
+	svc := task.NewService(mockRepo)
 	handler := NewTaskHandler(svc)
 
 	body := strings.NewReader(`{"userId":"2","description":"Task from token"}`)

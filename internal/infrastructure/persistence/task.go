@@ -78,21 +78,18 @@ func (r *TaskSqlRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, 
 	return domain.TaskPage{Tasks: toTaskDomainList(tasks), HasMore: hasMore}, nil
 }
 
-func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) error {
 	db := r.pgsql.connect()
 
-	var id int
-	err := db.QueryRow(`INSERT INTO task(user_id, description, created_at)
-		VALUES($1, $2, $3) RETURNING id`, userId, task.Description, task.CreatedAt).Scan(&id)
+	result, err := db.Exec(`INSERT INTO task(user_id, description, created_at)
+		VALUES($1, $2, $3)`, userId, task.Description, task.CreatedAt)
 	if err != nil {
-		return domain.Task{}, fmt.Errorf("failed to execute query: %w", err)
+		return fmt.Errorf("failed to execute query: %w", err)
 	}
-
-	taskEntity, err := r.GetByIDAndUserID(id, userId)
-	if err != nil {
-		return domain.Task{}, fmt.Errorf("failed to retrieve created task: %w", err)
+	if rows, err := result.RowsAffected(); err == nil && rows == 0 {
+		return fmt.Errorf("no task was inserted")
 	}
-	return toTaskDomain(Task(taskEntity)), nil
+	return nil
 }
 
 func (r *TaskSqlRepository) GetByIDAndUserID(id int, userId string) (domain.Task, error) {

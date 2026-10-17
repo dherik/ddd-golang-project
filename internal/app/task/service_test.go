@@ -1,4 +1,4 @@
-package api
+package task
 
 import (
 	"testing"
@@ -19,9 +19,8 @@ func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Tas
 	return args.Get(0).(domain.Task), args.Error(1)
 }
 
-func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
-	args := m.Called(userId, task)
-	return args.Get(0).(domain.Task), args.Error(1)
+func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) error {
+	return m.Called(userId, task).Error(0)
 }
 
 func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
@@ -29,7 +28,7 @@ func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage,
 	return args.Get(0).(domain.TaskPage), args.Error(1)
 }
 
-func TestTaskService_FindTasks(t *testing.T) {
+func TestService_FindTasks(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
 	query := domain.TaskQuery{UserId: "1", StartDate: &start, EndDate: &end, PageSize: 20}
@@ -41,19 +40,19 @@ func TestTaskService_FindTasks(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{Tasks: expectedTasks, HasMore: false}, nil)
 
-	svc := NewTaskService(mockRepo)
+	svc := NewService(mockRepo)
 	page, err := svc.FindTasks(query)
 
 	require.NoError(t, err)
-	assert.Len(t, page.Items, 1)
+	assert.Len(t, page.Tasks, 1)
 	assert.False(t, page.HasMore)
-	assert.Equal(t, 1, page.Items[0].Id)
-	assert.Equal(t, "Task 1", page.Items[0].Description)
-	assert.Equal(t, "1", page.Items[0].UserId)
+	assert.Equal(t, 1, page.Tasks[0].Id)
+	assert.Equal(t, "Task 1", page.Tasks[0].Description)
+	assert.Equal(t, "1", page.Tasks[0].UserId)
 	mockRepo.AssertExpectations(t)
 }
 
-func TestTaskService_FindTasks_RepositoryError(t *testing.T) {
+func TestService_FindTasks_RepositoryError(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
 	query := domain.TaskQuery{UserId: "1", StartDate: &start, EndDate: &end, PageSize: 20}
@@ -61,21 +60,21 @@ func TestTaskService_FindTasks_RepositoryError(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{}, assert.AnError)
 
-	svc := NewTaskService(mockRepo)
+	svc := NewService(mockRepo)
 	_, err := svc.FindTasks(query)
 
 	require.Error(t, err)
 	mockRepo.AssertExpectations(t)
 }
 
-func TestTaskService_GetTaskByID(t *testing.T) {
+func TestService_GetTaskByID(t *testing.T) {
 	now := time.Now().UTC()
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{
 		Id: 42, UserId: "1", Description: "Task 42", CreatedAt: now,
 	}, nil)
 
-	svc := NewTaskService(mockRepo)
+	svc := NewService(mockRepo)
 	task, err := svc.GetTaskByID("1", 42)
 
 	require.NoError(t, err)
@@ -85,11 +84,11 @@ func TestTaskService_GetTaskByID(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestTaskService_GetTaskByID_NotFound(t *testing.T) {
+func TestService_GetTaskByID_NotFound(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{}, domain.ErrTaskNotFound)
 
-	svc := NewTaskService(mockRepo)
+	svc := NewService(mockRepo)
 	_, err := svc.GetTaskByID("1", 42)
 
 	assert.ErrorIs(t, err, domain.ErrTaskNotFound)

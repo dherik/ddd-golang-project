@@ -7,7 +7,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/dherik/ddd-golang-project/internal/app/api"
+	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -17,9 +17,9 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
 		return task.UserId == "1" && task.Description == "Pay invoice INV-42 by 2026-11-01"
-	})).Return(domain.Task{}, nil)
+	})).Return(nil)
 
-	handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
+	handler := NewInvoiceDueHandler(task.NewService(mockRepo))
 
 	err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`))
 
@@ -65,9 +65,9 @@ func TestInvoiceDueEventReminderWording(t *testing.T) {
 			mockRepo := new(mockTaskRepository)
 			mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
 				return task.Description == tt.description
-			})).Return(domain.Task{}, nil)
+			})).Return(nil)
 
-			handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
+			handler := NewInvoiceDueHandler(task.NewService(mockRepo))
 
 			err := handler.HandleMessage(testMessage(tt.payload))
 
@@ -96,7 +96,7 @@ func TestInvoiceDueEventInvalidPayloadIsPermanent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(mockTaskRepository)
-			handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
+			handler := NewInvoiceDueHandler(task.NewService(mockRepo))
 
 			err := handler.HandleMessage(testMessage(tt.payload))
 
@@ -115,7 +115,7 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 		payload := fmt.Sprintf(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01","issuer":%q}`, longIssuer)
 
 		mockRepo := new(mockTaskRepository)
-		handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
+		handler := NewInvoiceDueHandler(task.NewService(mockRepo))
 
 		err := handler.HandleMessage(testMessage(payload))
 
@@ -126,8 +126,8 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 	t.Run("persistence failure", func(t *testing.T) {
 		mockRepo := new(mockTaskRepository)
 		mockRepo.On("AddTaskToUser", mock.Anything, mock.Anything).
-			Return(domain.Task{}, fmt.Errorf("database unavailable"))
-		handler := NewInvoiceDueHandler(api.NewTaskService(mockRepo))
+			Return(fmt.Errorf("database unavailable"))
+		handler := NewInvoiceDueHandler(task.NewService(mockRepo))
 
 		err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01"}`))
 

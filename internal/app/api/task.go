@@ -8,14 +8,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
 type TaskHandler struct {
-	TaskService *TaskService
+	TaskService *task.Service
 }
 
-func NewTaskHandler(taskService *TaskService) TaskHandler {
+func NewTaskHandler(taskService *task.Service) TaskHandler {
 	return TaskHandler{TaskService: taskService}
 }
 
@@ -59,7 +60,10 @@ func (h *TaskHandler) getTasks(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return NewHTTPError(http.StatusInternalServerError, "failed finding tasks")
 	}
-	return writeJSON(w, http.StatusOK, page)
+	return writeJSON(w, http.StatusOK, TasksResponse{
+		Items:   toResponseArray(page.Tasks),
+		HasMore: page.HasMore,
+	})
 }
 
 func (h *TaskHandler) getTaskByID(w http.ResponseWriter, r *http.Request) error {
@@ -73,14 +77,14 @@ func (h *TaskHandler) getTaskByID(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
-	task, err := h.TaskService.GetTaskByID(userId, id)
+	t, err := h.TaskService.GetTaskByID(userId, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrTaskNotFound) {
 			return NewHTTPError(http.StatusNotFound, "task not found")
 		}
 		return NewHTTPError(http.StatusInternalServerError, "failed getting task by id")
 	}
-	return writeJSON(w, http.StatusOK, task)
+	return writeJSON(w, http.StatusOK, toResponse(t))
 }
 
 func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
@@ -96,13 +100,13 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
 		return NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
 	}
 
-	task, err := domain.NewTask(userId, t.Description)
+	created, err := domain.NewTask(userId, t.Description)
 	if err != nil {
 		slog.Error("invalid task data", "err", err)
 		return NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = h.TaskService.AddTaskToUser(task)
+	err = h.TaskService.AddTaskToUser(created)
 	if err != nil {
 		slog.Error("failed adding task to user", "err", err)
 		return NewHTTPError(http.StatusInternalServerError, "failed to create the task for the user")
@@ -110,6 +114,23 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
 
 	writeNoContent(w, http.StatusCreated)
 	return nil
+}
+
+func toResponseArray(tasks []domain.Task) []TaskResponse {
+	taskResponses := make([]TaskResponse, 0, len(tasks))
+	for _, t := range tasks {
+		taskResponses = append(taskResponses, toResponse(t))
+	}
+	return taskResponses
+}
+
+func toResponse(t domain.Task) TaskResponse {
+	return TaskResponse{
+		Id:          t.Id,
+		UserId:      t.UserId,
+		Description: t.Description,
+		CreatedAt:   t.CreatedAt,
+	}
 }
 
 func parseOptionalDate(raw string) (*time.Time, bool) {

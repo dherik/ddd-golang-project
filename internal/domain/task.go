@@ -57,6 +57,6 @@ type TaskPage struct {
 
 type TaskRepository interface {
 	GetByIDAndUserID(id int, userId string) (Task, error)
-	AddTaskToUser(userId string, task Task) (Task, error)
+	AddTaskToUser(userId string, task Task) error
 	FindTasks(query TaskQuery) (TaskPage, error)
 }
