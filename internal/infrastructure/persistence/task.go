@@ -85,29 +85,6 @@ func (r *TaskSqlRepository) AddTaskToUser(userId string, task domain.Task) (doma
 	return toTaskDomain(Task(taskEntity)), nil
 }
 
-func (r *TaskSqlRepository) GetByUserID(userId string) ([]domain.Task, error) {
-	db := r.pgsql.connect()
-
-	rows, err := db.Query(`SELECT id, user_id, description, created_at FROM task 
-		where user_id = $1`, userId)
-	if err != nil {
-		return []domain.Task{}, fmt.Errorf("failed to execute query: %w", err)
-	}
-	defer rows.Close()
-
-	tasks := []Task{}
-	for rows.Next() {
-		var task Task
-		err = rows.Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
-		if err != nil {
-			return []domain.Task{}, fmt.Errorf("failed to scan row: %w", err)
-		}
-		tasks = append(tasks, task)
-	}
-
-	return toTaskDomainList(tasks), nil
-}
-
 func (r *TaskSqlRepository) GetByIDAndUserID(id int, userId string) (domain.Task, error) {
 	db := r.pgsql.connect()
 

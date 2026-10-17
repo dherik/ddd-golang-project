@@ -44,7 +44,6 @@ func NewTask(userId string, description string) (Task, error) {
 
 type TaskRepository interface {
 	GetByIDAndUserID(id int, userId string) (Task, error)
-	GetByUserID(userId string) ([]Task, error)
 	AddTaskToUser(userId string, task Task) (Task, error)
 	FindTasks(userId string, startDate time.Time, endDate time.Time) ([]Task, error)
 }

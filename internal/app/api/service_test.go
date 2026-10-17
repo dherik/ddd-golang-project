@@ -19,11 +19,6 @@ func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Tas
 	return args.Get(0).(domain.Task), args.Error(1)
 }
 
-func (m *mockTaskRepository) GetByUserID(userId string) ([]domain.Task, error) {
-	args := m.Called(userId)
-	return args.Get(0).([]domain.Task), args.Error(1)
-}
-
 func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
 	args := m.Called(userId, task)
 	return args.Get(0).(domain.Task), args.Error(1)
