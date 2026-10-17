@@ -67,25 +67,33 @@ func (r *RabbitMQ) DeclareQueueAndBind(queueName, exchange, routingKey string, a
 	return queue, nil
 }
 
-// DeclareDeadLetterQueue declares the dead-letter exchange, a dead-letter
-// queue, and the binding between them. Dead-lettered events are parked
-// there for inspection (see docs/adr/0003).
-func (r *RabbitMQ) DeclareDeadLetterQueue(exchange, queueName, routingKey string) error {
-	err := r.channel.ExchangeDeclare(
-		exchange,
-		amqp.ExchangeDirect,
+// ExchangeDirect is the direct exchange kind: publishers route by exact
+// routing key. Exported so the application layer can pin exchange kinds
+// without importing the AMQP client.
+const ExchangeDirect = amqp.ExchangeDirect
+
+// DeclareExchange declares a durable exchange of the given kind.
+func (r *RabbitMQ) DeclareExchange(name, kind string) error {
+	return r.channel.ExchangeDeclare(
+		name,
+		kind,
 		true,
 		false,
 		false,
 		false,
 		nil,
 	)
-	if err != nil {
+}
+
+// DeclareDeadLetterQueue declares the dead-letter exchange, a dead-letter
+// queue, and the binding between them. Dead-lettered events are parked
+// there for inspection (see docs/adr/0003).
+func (r *RabbitMQ) DeclareDeadLetterQueue(exchange, queueName, routingKey string) error {
+	if err := r.DeclareExchange(exchange, amqp.ExchangeDirect); err != nil {
 		return fmt.Errorf("failed to declare the dead-letter exchange %s: %w", exchange, err)
 	}
 
-	_, err = r.DeclareQueue(queueName, nil)
-	if err != nil {
+	if _, err := r.DeclareQueue(queueName, nil); err != nil {
 		return fmt.Errorf("failed to declare the dead-letter queue %s: %w", queueName, err)
 	}
 

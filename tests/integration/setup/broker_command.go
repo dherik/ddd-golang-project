@@ -6,51 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/testcontainers/testcontainers-go"
 )
-
-type Exchange struct {
-	testcontainers.ExecOptions
-	Name       string
-	VHost      string
-	Type       string
-	AutoDelete bool
-	Internal   bool
-	Durable    bool
-	Args       map[string]interface{}
-}
-
-func (e Exchange) AsCommand() []string {
-	cmd := []string{"rabbitmqadmin"}
-
-	if e.VHost != "" {
-		cmd = append(cmd, "--vhost="+e.VHost)
-	}
-
-	cmd = append(cmd, "declare", "exchange", fmt.Sprintf("name=%s", e.Name), fmt.Sprintf("type=%s", e.Type))
-
-	if e.AutoDelete {
-		cmd = append(cmd, "auto_delete=true")
-	}
-	if e.Internal {
-		cmd = append(cmd, "internal=true")
-	}
-	if e.Durable {
-		cmd = append(cmd, fmt.Sprintf("durable=%t", e.Durable))
-	}
-
-	if len(e.Args) > 0 {
-		bytes, err := json.Marshal(e.Args)
-		if err != nil {
-			return cmd
-		}
-
-		cmd = append(cmd, "arguments="+string(bytes))
-	}
-
-	return cmd
-}
 
 // PublishMessage publishes a raw payload to an exchange through the broker's
 // admin CLI, so tests can exercise consumers over real RabbitMQ.
@@ -69,28 +25,6 @@ func PublishMessage(exchange, routingKey, payload string) error {
 		return fmt.Errorf("failed publishing message, exit code %d: %s", exitCode, readExecOutput(output))
 	}
 	return nil
-}
-
-// readExecOutput drains a container exec output stream. The docker exec
-// stream frames stdout and stderr as repeated [type, 0, 0, 0, size] headers
-// followed by the payload; this concatenates the payloads in order.
-func readExecOutput(reader io.Reader) string {
-	if reader == nil {
-		return ""
-	}
-
-	var out bytes.Buffer
-	header := make([]byte, 8)
-	for {
-		if _, err := io.ReadFull(reader, header); err != nil {
-			break
-		}
-		size := binary.BigEndian.Uint32(header[4:8])
-		if _, err := io.CopyN(&out, reader, int64(size)); err != nil {
-			break
-		}
-	}
-	return out.String()
 }
 
 // DeadLetteredPayloads returns the payloads currently parked in a queue, so
@@ -119,4 +53,26 @@ func DeadLetteredPayloads(queueName string) ([]string, error) {
 		payloads = append(payloads, m.Payload)
 	}
 	return payloads, nil
+}
+
+// readExecOutput drains a container exec output stream. The docker exec
+// stream frames stdout and stderr as repeated [type, 0, 0, 0, size] headers
+// followed by the payload; this concatenates the payloads in order.
+func readExecOutput(reader io.Reader) string {
+	if reader == nil {
+		return ""
+	}
+
+	var out bytes.Buffer
+	header := make([]byte, 8)
+	for {
+		if _, err := io.ReadFull(reader, header); err != nil {
+			break
+		}
+		size := binary.BigEndian.Uint32(header[4:8])
+		if _, err := io.CopyN(&out, reader, int64(size)); err != nil {
+			break
+		}
+	}
+	return out.String()
 }

@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
+	"github.com/dherik/ddd-golang-project/internal/app/messaging"
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 )
 
 func (s *TaskTestSuite) TestInvoiceDueEventCreatesPaymentReminder() {
 	token := setup.Login("admin", "some_password")
 
-	err := setup.PublishMessage("billing", "invoice-due",
+	err := setup.PublishMessage(messaging.ExchangeBilling, messaging.RoutingKeyInvoiceDue,
 		`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`)
 	s.NoError(err)
 
@@ -25,7 +26,7 @@ func (s *TaskTestSuite) TestInvoiceDueEventCreatesPaymentReminder() {
 func (s *TaskTestSuite) TestInvoiceDueEventReminderIncludesIssuerAndAmount() {
 	token := setup.Login("admin", "some_password")
 
-	err := setup.PublishMessage("billing", "invoice-due",
+	err := setup.PublishMessage(messaging.ExchangeBilling, messaging.RoutingKeyInvoiceDue,
 		`{"invoiceId":"INV-7","userId":1,"dueDate":"2026-11-01","issuer":"Acme","amount":"199.90","currency":"EUR"}`)
 	s.NoError(err)
 
@@ -33,7 +34,7 @@ func (s *TaskTestSuite) TestInvoiceDueEventReminderIncludesIssuerAndAmount() {
 }
 
 func (s *TaskTestSuite) TestInvoiceDueEventReminderOnlyForNamedUser() {
-	err := setup.PublishMessage("billing", "invoice-due",
+	err := setup.PublishMessage(messaging.ExchangeBilling, messaging.RoutingKeyInvoiceDue,
 		`{"invoiceId":"INV-9","userId":1,"dueDate":"2026-11-01"}`)
 	s.NoError(err)
 
@@ -46,16 +47,16 @@ func (s *TaskTestSuite) TestInvoiceDueEventReminderOnlyForNamedUser() {
 
 func (s *TaskTestSuite) TestPoisonEventIsParkedAndConsumerStaysHealthy() {
 	poison := `{"invoiceId":"INV-BAD","userId":1}`
-	err := setup.PublishMessage("billing", "invoice-due", poison)
+	err := setup.PublishMessage(messaging.ExchangeBilling, messaging.RoutingKeyInvoiceDue, poison)
 	s.NoError(err)
 
-	waitForDeadLetter(s, "todo-service.dead.billing.invoice-due", poison)
+	waitForDeadLetter(s, messaging.DeadLetterQueueBilling, poison)
 
 	// The parked event must never have become a task.
 	adminToken := setup.Login("admin", "some_password")
 	s.Nil(findTaskByDescription(s, adminToken, "Pay invoice INV-BAD by "))
 
-	err = setup.PublishMessage("billing", "invoice-due",
+	err = setup.PublishMessage(messaging.ExchangeBilling, messaging.RoutingKeyInvoiceDue,
 		`{"invoiceId":"INV-OK","userId":1,"dueDate":"2026-11-01"}`)
 	s.NoError(err)
 	waitForPaymentReminder(s, adminToken, "Pay invoice INV-OK by 2026-11-01")

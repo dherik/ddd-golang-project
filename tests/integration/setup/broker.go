@@ -26,26 +26,12 @@ func SetupRabbitMQ() {
 		slog.Info("Initializing the RabbitMQ...")
 
 		ctx := context.Background()
+		// No topology is declared here: the application declares its complete
+		// topology at startup, so the container starts plain.
 		rabbitmqContainer, err := rabbitmq.RunContainer(ctx,
 			testcontainers.WithImage("rabbitmq:3-management-alpine"),
 			rabbitmq.WithAdminPassword("guest"),
 			rabbitmq.WithAdminPassword("guest"),
-			testcontainers.WithAfterReadyCommand(
-				Exchange{
-					Name:       "calendar",
-					Type:       "fanout",
-					AutoDelete: false,
-					Durable:    true,
-					Internal:   false,
-				},
-				Exchange{
-					Name:       "billing",
-					Type:       "direct",
-					AutoDelete: false,
-					Durable:    true,
-					Internal:   false,
-				},
-			),
 			testcontainers.WithWaitStrategy(
 				wait.ForLog("Server startup complete").
 					WithStartupTimeout(30*time.Second)),
