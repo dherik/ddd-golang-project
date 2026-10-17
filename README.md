@@ -44,7 +44,7 @@ The project follows the classic DDD dependency rule: inner layers define the con
 
 - **Domain** (`internal/domain`): entities, validation rules, repository interfaces, and the password-hashing and clock ports. No external dependencies (no third-party or outer-layer imports).
 - **Application** (`internal/app`): HTTP handlers, services/use cases, DTOs, routes, and message consumers. Depends on domain and (through interfaces) infrastructure.
-- **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, password hashing, and external integrations. Depends on domain.
+- **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, password hashing, system clock, and external integrations. Depends on domain.
 - **Config** (`internal/config`): loads `config.yaml` and applies environment variable overrides.
 
 ### Where to add new code
@@ -56,7 +56,8 @@ The project follows the classic DDD dependency rule: inner layers define the con
 | Use case / service | `internal/app/api` (or a dedicated use case package as the project grows) |
 | HTTP handler, request/response DTO, route | `internal/app/api` |
 | Repository implementation | `internal/infrastructure/persistence` |
-| Password hashing or clock adapter | `internal/infrastructure/security` (port in `internal/domain`) |
+| Password hashing adapter | `internal/infrastructure/security` (port in `internal/domain`) |
+| Clock adapter | `internal/infrastructure/clock` (port in `internal/domain`) |
 | External API client | `internal/infrastructure/external` |
 | Message consumer | `internal/app/messaging` + `internal/infrastructure/messaging` |
 
@@ -79,6 +80,7 @@ The project follows the classic DDD dependency rule: inner layers define the con
 │   ├── config              # Configuration loader
 │   ├── domain              # Domain entities, ports, and repository interfaces
 │   └── infrastructure
+│       ├── clock           # System clock
 │       ├── external        # External integrations
 │       ├── messaging       # RabbitMQ client
 │       ├── persistence     # PostgreSQL repositories
@@ -214,6 +216,8 @@ The API is served at `http://localhost:3333` by default.
 3. Send it on protected endpoints as `Authorization: Bearer <token>`.
 
 The token contains `userId`, `name`, `email`, `sub`, `iat`, and `exp`. The seeded `admin` user (`some_password`) exists only for local development.
+
+A failed login returns `401` with the same `invalid credentials` message whether the username is unknown or the password is wrong, so the endpoint does not reveal whether an account exists.
 
 ```sh
 TOKEN=$(curl -s -X POST http://localhost:3333/login \

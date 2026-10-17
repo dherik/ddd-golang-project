@@ -1,8 +1,31 @@
 package domain
 
 import (
+	"errors"
 	"testing"
 )
+
+func TestIsTaskValidationError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "invalid description", err: ErrDescriptionInvalid, want: true},
+		{name: "description too long", err: ErrDescriptionTooLong, want: true},
+		{name: "invalid user id", err: ErrUserIdInvalid, want: true},
+		{name: "wrapped validation error", err: errors.Join(errors.New("context"), ErrDescriptionInvalid), want: true},
+		{name: "repository failure", err: errors.New("database unavailable"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsTaskValidationError(tt.err); got != tt.want {
+				t.Errorf("got %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestNewTask(t *testing.T) {
 

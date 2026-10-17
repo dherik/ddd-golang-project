@@ -57,7 +57,12 @@ func validUserRequest() UserRequest {
 
 func TestUserServiceCreateUser(t *testing.T) {
 	var added domain.User
+	findCalled := false
 	repo := &fakeUserRepository{
+		findByUsername: func(username string) (domain.User, error) {
+			findCalled = true
+			return domain.User{}, domain.ErrUserNotFound
+		},
 		add: func(user domain.User) error {
 			added = user
 			return nil
@@ -67,6 +72,7 @@ func TestUserServiceCreateUser(t *testing.T) {
 	err := NewUserService(repo, fakePasswordHasher{}, testClock).createUser(validUserRequest())
 
 	require.NoError(t, err)
+	assert.False(t, findCalled, "createUser must not pre-check the repository")
 	assert.Equal(t, "john", added.Username)
 	assert.Equal(t, "john@example.com", added.Email)
 	assert.Equal(t, "hashed:_1ValidPassword", added.Password.Hash())

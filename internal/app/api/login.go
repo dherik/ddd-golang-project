@@ -35,7 +35,7 @@ func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
 	user, err := h.UserService.login(creds.Username, creds.Password)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
-			return NewHTTPError(http.StatusUnauthorized, "invalid credentials")
+			return NewHTTPError(http.StatusUnauthorized, ErrInvalidCredentials.Error())
 		}
 		return NewHTTPError(http.StatusInternalServerError, "failed to login")
 	}

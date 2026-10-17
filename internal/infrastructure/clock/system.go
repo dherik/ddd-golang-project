@@ -1,4 +1,4 @@
-package security
+package clock
 
 import "time"
 

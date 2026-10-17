@@ -102,7 +102,7 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
 
 	err = h.TaskService.CreateTask(userId, t.Description)
 	if err != nil {
-		if isTaskValidationError(err) {
+		if domain.IsTaskValidationError(err) {
 			slog.Error("invalid task data", "err", err)
 			return NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -112,12 +112,6 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
 
 	writeNoContent(w, http.StatusCreated)
 	return nil
-}
-
-func isTaskValidationError(err error) bool {
-	return errors.Is(err, domain.ErrDescriptionInvalid) ||
-		errors.Is(err, domain.ErrDescriptionTooLong) ||
-		errors.Is(err, domain.ErrUserIdInvalid)
 }
 
 func toResponseArray(tasks []domain.Task) []TaskResponse {

@@ -10,6 +10,14 @@ var ErrDescriptionTooLong = errors.New("the description is too long")
 var ErrUserIdInvalid = errors.New("the user id is not valid")
 var ErrTaskNotFound = errors.New("the task was not found")
 
+// IsTaskValidationError reports whether a task construction failure came from
+// one of the domain's task rules rather than from persistence.
+func IsTaskValidationError(err error) bool {
+	return errors.Is(err, ErrDescriptionInvalid) ||
+		errors.Is(err, ErrDescriptionTooLong) ||
+		errors.Is(err, ErrUserIdInvalid)
+}
+
 type Task struct {
 	Id          int
 	UserId      string
