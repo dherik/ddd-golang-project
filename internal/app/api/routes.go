@@ -1,14 +1,13 @@
 package api
 
 import (
-	"log/slog"
+	"context"
+	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	echojwt "github.com/labstack/echo-jwt/v4"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 type TaskResponse struct {
@@ -40,7 +39,6 @@ type UserResponse struct {
 }
 
 // jwtCustomClaims are custom claims extending default ones.
-// See https://github.com/golang-jwt/jwt for more examples
 type jwtCustomClaims struct {
 	UserID int    `json:"userId"`
 	Name   string `json:"name"`
@@ -64,86 +62,112 @@ func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler, userHandler U
 	}
 }
 
-func (r *Routes) SetupRoutes(e *echo.Echo) {
-
-	e.HTTPErrorHandler = customHTTPErrorHandler
-	e.Use(middleware.Recover())
-	config := echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(jwtCustomClaims)
-		},
-		SigningKey: []byte(r.JWTSecret),
-		ContextKey: userContextKey,
-	}
-
-	userGroup := e.Group("/users")
-	userGroup.Use(echojwt.WithConfig(config))
-	userGroup.POST("", r.UserHandler.createUser)
-	// userGroup.GET("", r.UserHandler.getUsers)
-
-	taskGroup := e.Group("/tasks")
-	taskGroup.Use(echojwt.WithConfig(config))
-	taskGroup.GET("", r.TaskHandler.getTasks)
-	taskGroup.GET("/:id", r.TaskHandler.getTaskByID)
-	taskGroup.POST("", r.TaskHandler.createTask)
-
-	e.POST("/login", r.LoginHandler.login)
-
-	e.GET("/api/health", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Ok")
+// SetupRoutes registers all handlers on the given mux.
+func (r *Routes) SetupRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("Ok"))
 	})
 
+	mux.HandleFunc("POST /login", handle(r.LoginHandler.login))
+
+	mux.HandleFunc("POST /users", handle(requireAuth(r.JWTSecret, r.UserHandler.createUser)))
+	mux.HandleFunc("GET /tasks", handle(requireAuth(r.JWTSecret, r.TaskHandler.getTasks)))
+	mux.HandleFunc("GET /tasks/{id}", handle(requireAuth(r.JWTSecret, r.TaskHandler.getTaskByID)))
+	mux.HandleFunc("POST /tasks", handle(requireAuth(r.JWTSecret, r.TaskHandler.createTask)))
 }
 
-func customHTTPErrorHandler(err error, c echo.Context) {
-	// Echo invokes this handler again for errors that RequestLogger already
-	// handled (it is configured with HandleError), so a committed response
-	// must not be written twice.
-	if c.Response().Committed {
-		return
+// handle adapts an error-returning handler to http.HandlerFunc.
+func handle(h func(w http.ResponseWriter, r *http.Request) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := h(w, r); err != nil {
+			CustomHTTPErrorHandler(err, w, r)
+		}
 	}
+}
 
+// requireAuth wraps a handler with JWT verification.
+func requireAuth(jwtSecret string, next func(w http.ResponseWriter, r *http.Request) error) func(w http.ResponseWriter, r *http.Request) error {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		auth := r.Header.Get("Authorization")
+		const prefix = "Bearer "
+		if !strings.HasPrefix(auth, prefix) {
+			return ErrUnauthorized
+		}
+		tokenStr := strings.TrimSpace(auth[len(prefix):])
+		if tokenStr == "" {
+			return ErrUnauthorized
+		}
+
+		token, err := jwt.ParseWithClaims(tokenStr, &jwtCustomClaims{}, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, ErrUnauthorized
+			}
+			return []byte(jwtSecret), nil
+		})
+		if err != nil || !token.Valid {
+			return ErrUnauthorized
+		}
+		claims, ok := token.Claims.(*jwtCustomClaims)
+		if !ok || claims == nil || claims.UserID <= 0 {
+			return ErrUnauthorized
+		}
+
+		ctx := context.WithValue(r.Context(), userContextKey, claims)
+		return next(w, r.WithContext(ctx))
+	}
+}
+
+// HTTPError carries an HTTP status code and message, mirroring Echo's.
+type HTTPError struct {
+	Code    int
+	Message string
+}
+
+func (e *HTTPError) Error() string { return e.Message }
+
+func NewHTTPError(code int, message string) *HTTPError {
+	return &HTTPError{Code: code, Message: message}
+}
+
+var ErrUnauthorized = NewHTTPError(http.StatusUnauthorized, "Unauthorized")
+
+func CustomHTTPErrorHandler(err error, w http.ResponseWriter, r *http.Request) {
 	code := http.StatusInternalServerError
 	message := "Internal Server Error"
-
-	if he, ok := err.(*echo.HTTPError); ok {
+	if he, ok := err.(*HTTPError); ok {
 		code = he.Code
-		message = he.Message.(string)
+		message = he.Message
 	}
 
-	// Create a custom error response
-	errorResponse := map[string]interface{}{
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"timestamp": time.Now().Format(time.RFC3339),
 		"error": map[string]interface{}{
 			"code":    code,
 			"message": message,
 		},
-	}
-
-	// Send the custom error response
-	err = c.JSON(code, errorResponse)
-	if err != nil {
-		slog.Error("failed sending custom error response", "err", err)
-	}
+	})
 }
 
-// var jwtKey = []byte("my_secret_key")
+// writeJSON writes v as compact JSON with the given status code.
+func writeJSON(w http.ResponseWriter, status int, v interface{}) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	return json.NewEncoder(w).Encode(v)
+}
 
-// type SignInResponse struct {
-// 	Token     string    `json:"token"`
-// 	ExpiresAt time.Time `json:"expiresAt"`
-// 	// UserID       int       `json:"userId"`
-// 	Username     string   `json:"username"`
-// 	Role         string   `json:"role"`
-// 	RefreshToken string   `json:"refresh_token,omitempty"`
-// 	Metadata     Metadata `json:"metadata,omitempty"`
-// }
+// writeNoContent writes an empty response with the given status code.
+func writeNoContent(w http.ResponseWriter, status int) {
+	w.WriteHeader(status)
+}
 
 type ErrResponse struct {
-	Err            error `json:"-"` // low-level runtime error
-	HTTPStatusCode int   `json:"-"` // http response status code
-
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+	Err            error `json:"-"`
+	HTTPStatusCode int   `json:"-"`
+	StatusText     string `json:"status"`
+	AppCode        int64  `json:"code,omitempty"`
+	ErrorText      string `json:"error,omitempty"`
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/labstack/echo/v4"
 )
 
 type LoginHandler struct {
@@ -23,26 +22,26 @@ func NewLoginHandler(userService *UserService, jwtSecret string) LoginHandler {
 	}
 }
 
-func (h *LoginHandler) login(c echo.Context) error {
-	creds := new(Credentials)
+func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
+	creds := Credentials{}
 
-	if err := c.Bind(creds); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	if err := bindJSON(r, &creds); err != nil {
+		return NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if creds.Username == "" || creds.Password == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "username or password is empty")
+		return NewHTTPError(http.StatusBadRequest, "username or password is empty")
 	}
 
 	user, authorized, err := h.UserService.login(creds.Username, creds.Password)
 	if err != nil {
 		if errors.Is(err, persistence.ErrUserNotFound) {
-			return echo.NewHTTPError(http.StatusUnauthorized, "user not found")
+			return NewHTTPError(http.StatusUnauthorized, "user not found")
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to login")
+		return NewHTTPError(http.StatusInternalServerError, "failed to login")
 	}
 	if !authorized {
-		return echo.ErrUnauthorized
+		return ErrUnauthorized
 	}
 
 	now := time.Now().UTC()
@@ -62,7 +61,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 
 	tokenString, err := token.SignedString([]byte(h.JWTSecret))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate token")
+		return NewHTTPError(http.StatusInternalServerError, "failed to generate token")
 	}
 
 	loginResponse := LoginResponse{
@@ -71,7 +70,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 		UserID:    user.Id,
 	}
 
-	return c.JSON(http.StatusOK, loginResponse)
+	return writeJSON(w, http.StatusOK, loginResponse)
 }
 
 type Credentials struct {

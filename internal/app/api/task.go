@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -8,49 +9,45 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
-	"github.com/labstack/echo/v4"
 )
 
 type TaskHandler struct {
 	TaskService *TaskService
 }
 
+func NewTaskHandler(taskService *TaskService) TaskHandler {
+	return TaskHandler{TaskService: taskService}
+}
+
 const (
 	defaultTaskPageSize = 20
 	maxTaskPageSize     = 100
-	// maxPageOffset is the largest representable offset. Anything above it is
-	// treated as past the end of every list rather than as malformed input.
-	maxPageOffset = int(^uint(0) >> 1)
+	maxPageOffset       = int(^uint(0) >> 1)
 )
 
-func NewTaskHandler(taskService *TaskService) TaskHandler {
-	return TaskHandler{
-		TaskService: taskService,
-	}
-}
-
-func (h *TaskHandler) getTasks(c echo.Context) error {
-	userId, err := authenticatedUserID(c)
+func (h *TaskHandler) getTasks(w http.ResponseWriter, r *http.Request) error {
+	userId, err := authenticatedUserID(r)
 	if err != nil {
 		return err
 	}
 
-	startDate, ok := parseOptionalDate(c.QueryParam("startDate"))
+	startDate, ok := parseOptionalDate(r.URL.Query().Get("startDate"))
 	if !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid start date")
+		return NewHTTPError(http.StatusBadRequest, "invalid start date")
 	}
-	endDate, ok := parseOptionalDate(c.QueryParam("endDate"))
+	endDate, ok := parseOptionalDate(r.URL.Query().Get("endDate"))
 	if !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid end date")
+		return NewHTTPError(http.StatusBadRequest, "invalid end date")
 	}
-	limit, ok := parseTaskPageSize(c.QueryParam("limit"))
+	limit, ok := parseTaskPageSize(r.URL.Query().Get("limit"))
 	if !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid limit")
+		return NewHTTPError(http.StatusBadRequest, "invalid limit")
 	}
-	offset, ok := parseTaskPageOffset(c.QueryParam("offset"))
+	offset, ok := parseTaskPageOffset(r.URL.Query().Get("offset"))
 	if !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid offset")
+		return NewHTTPError(http.StatusBadRequest, "invalid offset")
 	}
+
 	query := domain.TaskQuery{
 		UserId:    userId,
 		StartDate: startDate,
@@ -60,59 +57,59 @@ func (h *TaskHandler) getTasks(c echo.Context) error {
 	}
 	page, err := h.TaskService.FindTasks(query)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed finding tasks")
+		return NewHTTPError(http.StatusInternalServerError, "failed finding tasks")
 	}
-	return c.JSONPretty(http.StatusOK, page, "")
+	return writeJSON(w, http.StatusOK, page)
 }
 
-func (h *TaskHandler) getTaskByID(c echo.Context) error {
-	userId, err := authenticatedUserID(c)
+func (h *TaskHandler) getTaskByID(w http.ResponseWriter, r *http.Request) error {
+	userId, err := authenticatedUserID(r)
 	if err != nil {
 		return err
 	}
 
 	slog.Info("get task by id")
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid task id")
+		return NewHTTPError(http.StatusBadRequest, "invalid task id")
 	}
 	task, err := h.TaskService.GetTaskByID(userId, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrTaskNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, "task not found")
+			return NewHTTPError(http.StatusNotFound, "task not found")
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed getting task by id")
+		return NewHTTPError(http.StatusInternalServerError, "failed getting task by id")
 	}
-	return c.JSONPretty(http.StatusOK, task, " ")
+	return writeJSON(w, http.StatusOK, task)
 }
 
-func (h *TaskHandler) createTask(c echo.Context) error {
-	userId, err := authenticatedUserID(c)
+func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
+	userId, err := authenticatedUserID(r)
 	if err != nil {
 		return err
 	}
 
 	slog.Info("add new task for user", "userId", userId)
 	t := TaskRequest{}
-	if err := c.Bind(&t); err != nil {
+	if err := bindJSON(r, &t); err != nil {
 		slog.Error("failed binding body to task request struct", "err", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
+		return NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
 	}
 
-	// The authenticated user always owns the new task.
 	task, err := domain.NewTask(userId, t.Description)
 	if err != nil {
 		slog.Error("invalid task data", "err", err)
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	err = h.TaskService.AddTaskToUser(task)
 	if err != nil {
 		slog.Error("failed adding task to user", "err", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create the task for the user")
+		return NewHTTPError(http.StatusInternalServerError, "failed to create the task for the user")
 	}
 
-	return c.NoContent(http.StatusCreated)
+	writeNoContent(w, http.StatusCreated)
+	return nil
 }
 
 func parseOptionalDate(raw string) (*time.Time, bool) {
@@ -143,12 +140,18 @@ func parseTaskPageOffset(raw string) (int, bool) {
 	}
 	offset, err := strconv.ParseUint(raw, 10, strconv.IntSize)
 	if err != nil {
-		// A number too large for an int is still a valid offset: it is simply
-		// beyond any page, so treat it as past the end instead of malformed.
 		if errors.Is(err, strconv.ErrRange) {
 			return maxPageOffset, true
 		}
 		return 0, false
 	}
 	return int(offset), true
+}
+
+func bindJSON(r *http.Request, v interface{}) error {
+	if r.Body == nil {
+		return errors.New("empty body")
+	}
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(v)
 }

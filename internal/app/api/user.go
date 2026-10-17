@@ -4,8 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
 )
 
 type UserHandler struct {
@@ -18,22 +16,23 @@ func NewUserHandler(userService *UserService) UserHandler {
 	}
 }
 
-func (h *UserHandler) createUser(c echo.Context) error {
+func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) error {
 	u := UserRequest{}
-	if err := c.Bind(&u); err != nil {
+	if err := bindJSON(r, &u); err != nil {
 		slog.Error("failed binding body to user request struct", "err", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "failed to create the user")
+		return NewHTTPError(http.StatusBadRequest, "failed to create the user")
 	}
 
 	_, err := h.UserService.createUser(u)
 	if err != nil {
 		if errors.Is(err, ErrUserAlreadyExists) || errors.Is(err, ErrEmailAlreadyExists) {
-			return echo.NewHTTPError(http.StatusConflict, err.Error())
+			return NewHTTPError(http.StatusConflict, err.Error())
 		}
 
 		slog.Error("failed to create user", "err", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create the user")
+		return NewHTTPError(http.StatusInternalServerError, "failed to create the user")
 	}
 
-	return c.NoContent(http.StatusCreated)
+	writeNoContent(w, http.StatusCreated)
+	return nil
 }

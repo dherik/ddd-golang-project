@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,18 +10,15 @@ import (
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func withAuthenticatedUser(c echo.Context, userID int) echo.Context {
-	c.Set(userContextKey, &jwt.Token{
-		Claims: &jwtCustomClaims{UserID: userID},
-	})
-	return c
+func withAuthenticatedUser(r *http.Request, userID int) *http.Request {
+	claims := &jwtCustomClaims{UserID: userID}
+	ctx := context.WithValue(r.Context(), userContextKey, claims)
+	return r.WithContext(ctx)
 }
 
 func TestTaskHandler_GetTasks(t *testing.T) {
@@ -44,12 +42,11 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
 	rec := httptest.NewRecorder()
-	c := withAuthenticatedUser(e.NewContext(req, rec), 1)
+	r := withAuthenticatedUser(req, 1)
 
-	err := handler.getTasks(c)
+	err := handler.getTasks(rec, r)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -69,15 +66,14 @@ func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=invalid&endDate=2024-12-31T00:00:00Z", nil)
 	rec := httptest.NewRecorder()
-	c := withAuthenticatedUser(e.NewContext(req, rec), 1)
+	r := withAuthenticatedUser(req, 1)
 
-	err := handler.getTasks(c)
+	err := handler.getTasks(rec, r)
 
 	require.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
+	httpErr, ok := err.(*HTTPError)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusBadRequest, httpErr.Code)
 	assert.Equal(t, "invalid start date", httpErr.Message)
@@ -88,15 +84,14 @@ func TestTaskHandler_GetTasks_UnauthorizedWithoutClaims(t *testing.T) {
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	r := req
 
-	err := handler.getTasks(c)
+	err := handler.getTasks(rec, r)
 
 	require.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
+	httpErr, ok := err.(*HTTPError)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusUnauthorized, httpErr.Code)
 }
@@ -112,15 +107,12 @@ func TestTaskHandler_GetTaskByID(t *testing.T) {
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
+	req.SetPathValue("id", "42")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("42")
-	c = withAuthenticatedUser(c, 1)
+	r := withAuthenticatedUser(req, 1)
 
-	err := handler.getTaskByID(c)
+	err := handler.getTaskByID(rec, r)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -140,18 +132,15 @@ func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
+	req.SetPathValue("id", "42")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("42")
-	c = withAuthenticatedUser(c, 1)
+	r := withAuthenticatedUser(req, 1)
 
-	err := handler.getTaskByID(c)
+	err := handler.getTaskByID(rec, r)
 
 	require.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
+	httpErr, ok := err.(*HTTPError)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusNotFound, httpErr.Code)
 
@@ -167,14 +156,13 @@ func TestTaskHandler_CreateTaskIgnoresUserIdFromBody(t *testing.T) {
 	svc := NewTaskService(mockRepo)
 	handler := NewTaskHandler(svc)
 
-	e := echo.New()
 	body := strings.NewReader(`{"userId":"2","description":"Task from token"}`)
 	req := httptest.NewRequest(http.MethodPost, "/tasks", body)
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	c := withAuthenticatedUser(e.NewContext(req, rec), 1)
+	r := withAuthenticatedUser(req, 1)
 
-	err := handler.createTask(c)
+	err := handler.createTask(rec, r)
 
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, rec.Code)

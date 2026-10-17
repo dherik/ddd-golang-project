@@ -7,13 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
+	"sync/atomic"
+	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
 	listener "github.com/dherik/ddd-golang-project/internal/app/messaging"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 type Server struct {
@@ -23,8 +24,11 @@ type Server struct {
 	JWTSecret          string
 }
 
-func (s *Server) Start() {
+const requestIDKey = "request_id"
 
+var requestIDCounter uint64
+
+func (s *Server) Start() {
 	pgsql, err := persistence.NewPostgreRepository(s.Datasource)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -38,13 +42,12 @@ func (s *Server) Start() {
 	userHandler := api.NewUserHandler(userService)
 	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
-	rabbitMQ, err := rabbitmq.NewRabbitMQ(s.RabbitMQDataSource.ConnectionString()) //FIXME error
+	rabbitMQ, err := rabbitmq.NewRabbitMQ(s.RabbitMQDataSource.ConnectionString())
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
-	defer rabbitMQ.Close() //TODO test it
+	defer rabbitMQ.Close()
 
-	// Create application context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -57,54 +60,116 @@ func (s *Server) Start() {
 	messageListener := listener.NewMessageListener(rabbitMQ)
 	calendarHandler := &listener.CalendarHandler{}
 
-	// Start listening to queues
 	if err := messageListener.StartListening(ctx, queueCalendar.Name, calendarHandler); err != nil {
 		log.Fatalf("Failed to start listening to order queue: %v", err)
 	}
 
-	echo := echo.New()
-	setupSlog(echo)
+	setupSlog()
 
-	routes.SetupRoutes(echo)
-	echo.Logger.Fatal(echo.Start(fmt.Sprintf(":%d", s.HTTPPort)))
+	mux := http.NewServeMux()
+	routes.SetupRoutes(mux)
+
+	handler := chain(mux,
+		recoverMiddleware,
+		requestIDMiddleware,
+		requestLoggerMiddleware,
+	)
+
+	httpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.HTTPPort),
+		Handler: handler,
+	}
+
+	slog.Info("Initializing the HTTP server...", "port", s.HTTPPort)
+	if err := httpServer.ListenAndServe(); err != nil {
+		log.Fatalf("HTTP server failed: %v", err)
+	}
 }
 
-func setupSlog(e *echo.Echo) {
+func setupSlog() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 	slog.SetDefault(logger)
+}
 
-	e.Use(middleware.RequestID())
-	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogMethod:    true,
-		LogLatency:   true,
-		LogRequestID: true,
-		LogStatus:    true,
-		LogURI:       true,
-		LogError:     true,
-		HandleError:  true, // forwards error to the global error handler, so it can decide appropriate status code
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			attrs := []slog.Attr{
-				slog.String("method", v.Method),
-				slog.String("uri", v.URI),
-				slog.Int("status", v.Status),
-				slog.String("latency", v.Latency.String()),
-				slog.String("request_id", v.RequestID),
+func chain(h http.Handler, mws ...func(http.Handler) http.Handler) http.Handler {
+	for i := len(mws) - 1; i >= 0; i-- {
+		h = mws[i](h)
+	}
+	return h
+}
+
+func recoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("panic recovered", "err", rec)
+				api.CustomHTTPErrorHandler(api.NewHTTPError(http.StatusInternalServerError, "Internal Server Error"), w, r)
 			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
 
-			level := slog.LevelInfo
-			switch {
-			case v.Status >= http.StatusInternalServerError:
-				level = slog.LevelError
-				if v.Error != nil {
-					attrs = append(attrs, slog.String("err", v.Error.Error()))
-				}
-			case v.Status >= http.StatusBadRequest:
-				level = slog.LevelWarn
-			}
+func requestIDMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := r.Header.Get("X-Request-ID")
+		if id == "" {
+			id = strconv.FormatUint(atomic.AddUint64(&requestIDCounter, 1), 36)
+		}
+		w.Header().Set("X-Request-ID", id)
+		ctx := context.WithValue(r.Context(), requestIDKey, id)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
-			logger.LogAttrs(c.Request().Context(), level, "request", attrs...)
-			return nil
-		},
-	}))
+func requestLoggerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		latency := time.Since(start)
+
+		level := slog.LevelInfo
+		if rec.status >= http.StatusInternalServerError {
+			level = slog.LevelError
+		} else if rec.status >= http.StatusBadRequest {
+			level = slog.LevelWarn
+		}
+		slog.LogAttrs(r.Context(), level, "request",
+			slog.String("method", r.Method),
+			slog.String("uri", r.URL.RequestURI()),
+			slog.Int("status", rec.status),
+			slog.String("latency", latency.String()),
+			slog.String("request_id", requestIDFromContext(r.Context())),
+		)
+	})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status  int
+	written bool
+}
+
+func (s *statusRecorder) WriteHeader(code int) {
+	if !s.written {
+		s.status = code
+		s.written = true
+	}
+	s.ResponseWriter.WriteHeader(code)
+}
+
+func (s *statusRecorder) Write(b []byte) (int, error) {
+	if !s.written {
+		s.status = http.StatusOK
+		s.written = true
+	}
+	return s.ResponseWriter.Write(b)
+}
+
+func requestIDFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(requestIDKey).(string); ok {
+		return v
+	}
+	return ""
 }
