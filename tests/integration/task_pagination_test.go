@@ -15,11 +15,6 @@ import (
 
 const tasksURL = "http://localhost:3333/tasks"
 
-type taskPageBody struct {
-	Items   []api.TaskResponse `json:"items"`
-	HasMore bool               `json:"hasMore"`
-}
-
 func (s *TaskTestSuite) requestTaskList(token string, params url.Values) (int, []byte) {
 	s.T().Helper()
 
@@ -37,15 +32,31 @@ func (s *TaskTestSuite) requestTaskList(token string, params url.Values) (int, [
 	return response.StatusCode, body
 }
 
-func (s *TaskTestSuite) fetchTaskPage(token string, params url.Values) taskPageBody {
+func (s *TaskTestSuite) fetchTaskPage(token string, params url.Values) api.TasksResponse {
 	s.T().Helper()
 
 	status, body := s.requestTaskList(token, params)
 	s.Require().Equal(http.StatusOK, status, string(body))
 
-	var page taskPageBody
+	var page api.TasksResponse
 	s.Require().NoError(json.Unmarshal(body, &page))
 	return page
+}
+
+func (s *TaskTestSuite) assertErrorResponse(status int, body []byte, wantStatus int, wantMessage string) {
+	s.T().Helper()
+
+	s.Require().Equal(wantStatus, status, string(body))
+
+	var errorBody struct {
+		Error struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	s.Require().NoError(json.Unmarshal(body, &errorBody))
+	s.Equal(wantStatus, errorBody.Error.Code)
+	s.Equal(wantMessage, errorBody.Error.Message)
 }
 
 func wideDateRange() url.Values {
@@ -101,7 +112,7 @@ func (s *TaskTestSuite) TestPaginationWalksEveryTaskExactlyOnce() {
 
 	seen := map[string]bool{}
 	var descriptions []string
-	lastPage := 0
+	lastOffset := 0
 
 	for offset := 0; offset <= 25; offset += 10 {
 		params := wideDateRange()
@@ -109,7 +120,7 @@ func (s *TaskTestSuite) TestPaginationWalksEveryTaskExactlyOnce() {
 		params.Set("offset", fmt.Sprint(offset))
 
 		page := s.fetchTaskPage(token, params)
-		lastPage = offset
+		lastOffset = offset
 		for _, task := range page.Items {
 			s.Falsef(seen[task.Description], "task %q was returned twice", task.Description)
 			seen[task.Description] = true
@@ -121,7 +132,7 @@ func (s *TaskTestSuite) TestPaginationWalksEveryTaskExactlyOnce() {
 	}
 
 	s.Len(descriptions, 25)
-	s.Equal(20, lastPage)
+	s.Equal(20, lastOffset)
 	s.Equal("Walk task 25", descriptions[0])
 	s.Equal("Walk task 01", descriptions[24])
 }
@@ -173,7 +184,7 @@ func (s *TaskTestSuite) TestPaginationPastTheEndReturnsAnEmptyArray() {
 	status, body := s.requestTaskList(token, params)
 	s.Require().Equal(http.StatusOK, status, string(body))
 
-	var page taskPageBody
+	var page api.TasksResponse
 	s.Require().NoError(json.Unmarshal(body, &page))
 	s.Empty(page.Items)
 	s.False(page.HasMore)
@@ -233,18 +244,7 @@ func (s *TaskTestSuite) TestPaginationRejectsInvalidPageParameters() {
 			params.Set(tc.param, tc.value)
 
 			status, body := s.requestTaskList(token, params)
-
-			s.Require().Equal(http.StatusBadRequest, status, string(body))
-
-			var errorBody struct {
-				Error struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				} `json:"error"`
-			}
-			s.Require().NoError(json.Unmarshal(body, &errorBody))
-			s.Equal(http.StatusBadRequest, errorBody.Error.Code)
-			s.Equal(tc.message, errorBody.Error.Message)
+			s.assertErrorResponse(status, body, http.StatusBadRequest, tc.message)
 		})
 	}
 }
@@ -319,18 +319,7 @@ func (s *TaskTestSuite) TestPaginationRejectsMalformedDates() {
 			params.Set(tc.param, "not-a-date")
 
 			status, body := s.requestTaskList(token, params)
-
-			s.Require().Equal(http.StatusBadRequest, status, string(body))
-
-			var errorBody struct {
-				Error struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				} `json:"error"`
-			}
-			s.Require().NoError(json.Unmarshal(body, &errorBody))
-			s.Equal(http.StatusBadRequest, errorBody.Error.Code)
-			s.Equal(tc.message, errorBody.Error.Message)
+			s.assertErrorResponse(status, body, http.StatusBadRequest, tc.message)
 		})
 	}
 }
@@ -399,4 +388,73 @@ func (s *TaskTestSuite) TestPaginationInsertDriftAndEndDatePinning() {
 	s.Require().Len(pinnedPage.Items, 2)
 	s.Equal("Drift task 03", pinnedPage.Items[0].Description)
 	s.Equal("Drift task 02", pinnedPage.Items[1].Description)
+}
+
+func (s *TaskTestSuite) TestPaginationRequiresAuthentication() {
+	req, err := http.NewRequest(http.MethodGet, tasksURL, nil)
+	s.Require().NoError(err)
+
+	response, err := http.DefaultClient.Do(req)
+	s.Require().NoError(err)
+	defer response.Body.Close()
+
+	s.Equal(http.StatusUnauthorized, response.StatusCode)
+}
+
+func (s *TaskTestSuite) TestPaginationReturnsAnEmptyPageForAUserWithNoTasks() {
+	token := setup.Login("jane_smith", "some_password")
+
+	status, body := s.requestTaskList(token, url.Values{})
+	s.Require().Equal(http.StatusOK, status, string(body))
+
+	var page api.TasksResponse
+	s.Require().NoError(json.Unmarshal(body, &page))
+	s.Empty(page.Items)
+	s.False(page.HasMore)
+
+	var envelope map[string]json.RawMessage
+	s.Require().NoError(json.Unmarshal(body, &envelope))
+	s.Equal("[]", strings.TrimSpace(string(envelope["items"])))
+}
+
+func (s *TaskTestSuite) TestPaginationAppliesDateBoundsToEveryPage() {
+	token := setup.Login("jane_smith", "some_password")
+
+	start := time.Date(2025, 8, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(10 * time.Minute)
+
+	for i := 1; i <= 3; i++ {
+		setup.InsertTaskWithCreatedAt(3, fmt.Sprintf("Before task %02d", i), start.Add(-time.Duration(i)*time.Minute))
+	}
+	for i := 1; i <= 6; i++ {
+		setup.InsertTaskWithCreatedAt(3, fmt.Sprintf("In range task %02d", i), start.Add(time.Duration(i)*time.Minute))
+	}
+	for i := 1; i <= 3; i++ {
+		setup.InsertTaskWithCreatedAt(3, fmt.Sprintf("After task %02d", i), start.Add(time.Duration(i)*time.Hour))
+	}
+
+	var descriptions []string
+	for offset := 0; offset < 6; offset += 2 {
+		params := url.Values{
+			"startDate": {start.Format(time.RFC3339)},
+			"endDate":   {end.Format(time.RFC3339)},
+			"limit":     {"2"},
+			"offset":    {fmt.Sprint(offset)},
+		}
+
+		page := s.fetchTaskPage(token, params)
+		for _, task := range page.Items {
+			descriptions = append(descriptions, task.Description)
+		}
+		s.Equal(offset < 4, page.HasMore)
+	}
+
+	s.Equal([]string{
+		"In range task 06",
+		"In range task 05",
+		"In range task 04",
+		"In range task 03",
+		"In range task 02",
+		"In range task 01",
+	}, descriptions)
 }
