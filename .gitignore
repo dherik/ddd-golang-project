@@ -26,3 +26,5 @@ go.work
 # Project files
 ddd-task
 main
+# Scratchpad / local issue tracking
+.scratch/
