@@ -2,7 +2,6 @@ package domain
 
 import (
 	"errors"
-	"log/slog"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -37,14 +36,11 @@ func (p *Password) Validate() error {
 
 func (p *Password) CheckPasswordHash(plainPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(p.HashPassword), []byte(plainPassword))
-	if err != nil {
-		slog.Error("failed comparing hash and password", "err", err)
-	}
 	return err == nil
 }
 
 func (p *Password) hashPassword() error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(p.PlainPassword), 8)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(p.PlainPassword), bcrypt.DefaultCost)
 	p.HashPassword = string(hashedPassword)
 	return err
 }

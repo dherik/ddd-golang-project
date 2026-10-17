@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
@@ -73,24 +74,36 @@ func setupSlog(e *echo.Echo) {
 
 	slog.SetDefault(logger)
 
+	e.Use(middleware.RequestID())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus:   true,
-		LogURI:      true,
-		LogError:    true,
-		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
+		LogMethod:    true,
+		LogLatency:   true,
+		LogRequestID: true,
+		LogStatus:    true,
+		LogURI:       true,
+		LogError:     true,
+		HandleError:  true, // forwards error to the global error handler, so it can decide appropriate status code
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			if v.Error == nil {
-				logger.LogAttrs(context.Background(), slog.LevelInfo, "REQUEST",
-					slog.String("uri", v.URI),
-					slog.Int("status", v.Status),
-				)
-			} else {
-				logger.LogAttrs(context.Background(), slog.LevelError, "REQUEST_ERROR",
-					slog.String("uri", v.URI),
-					slog.Int("status", v.Status),
-					slog.String("err", v.Error.Error()),
-				)
+			attrs := []slog.Attr{
+				slog.String("method", v.Method),
+				slog.String("uri", v.URI),
+				slog.Int("status", v.Status),
+				slog.String("latency", v.Latency.String()),
+				slog.String("request_id", v.RequestID),
 			}
+
+			level := slog.LevelInfo
+			switch {
+			case v.Status >= http.StatusInternalServerError:
+				level = slog.LevelError
+				if v.Error != nil {
+					attrs = append(attrs, slog.String("err", v.Error.Error()))
+				}
+			case v.Status >= http.StatusBadRequest:
+				level = slog.LevelWarn
+			}
+
+			logger.LogAttrs(c.Request().Context(), level, "request", attrs...)
 			return nil
 		},
 	}))

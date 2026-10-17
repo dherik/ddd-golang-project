@@ -24,6 +24,7 @@ func StartServer(dataSource persistence.Datasource, rabbitMQDataSource rabbitmq.
 			Datasource:         dataSource,
 			RabbitMQDataSource: rabbitMQDataSource,
 			HTTPPort:           3333,
+			JWTSecret:          "integration-test-secret",
 		}
 
 		go server.Start()

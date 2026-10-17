@@ -94,3 +94,27 @@ func TestTaskHandler_GetTaskByID(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 }
+
+func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("GetByID", 42).Return(domain.Task{}, domain.ErrTaskNotFound)
+
+	svc := NewTaskService(mockRepo)
+	handler := NewTaskHandler(svc)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("42")
+
+	err := handler.getTaskByID(c)
+
+	require.Error(t, err)
+	httpErr, ok := err.(*echo.HTTPError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusNotFound, httpErr.Code)
+
+	mockRepo.AssertExpectations(t)
+}

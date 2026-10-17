@@ -9,6 +9,7 @@ import (
 var ErrDescriptionInvalid = errors.New("the description is not valid")
 var ErrDescriptionTooLong = errors.New("the description is too long")
 var ErrUserIdInvalid = errors.New("the user id is not valid")
+var ErrTaskNotFound = errors.New("the task was not found")
 
 type Task struct {
 	Id          int

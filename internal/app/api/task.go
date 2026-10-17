@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -46,6 +47,9 @@ func (h *TaskHandler) getTaskByID(c echo.Context) error {
 	}
 	task, err := h.TaskService.GetTasksByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrTaskNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "task not found")
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed getting task by id")
 	}
 	return c.JSONPretty(http.StatusOK, task, " ")

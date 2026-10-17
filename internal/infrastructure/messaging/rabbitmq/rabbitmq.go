@@ -1,8 +1,9 @@
 package rabbitmq
 
 import (
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -38,6 +39,9 @@ func NewRabbitMQ(url string) (*RabbitMQ, error) {
 
 	ch, err := conn.Channel()
 	if err != nil {
+		if closeErr := conn.Close(); closeErr != nil {
+			slog.Error("failed to close RabbitMQ connection after channel error", "err", closeErr)
+		}
 		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
 
@@ -97,10 +101,14 @@ func (r *RabbitMQ) Consume(queueName string) (<-chan amqp.Delivery, error) {
 }
 
 func (r *RabbitMQ) Close() {
-	if err := r.channel.Close(); err != nil {
-		log.Panic(fmt.Errorf("failed to close channel: %w", err))
+	if r.channel != nil {
+		if err := r.channel.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+			slog.Error("failed to close RabbitMQ channel", "err", err)
+		}
 	}
-	if err := r.conn.Close(); err != nil {
-		log.Panic(fmt.Errorf("failed to close connection: %w", err))
+	if r.conn != nil {
+		if err := r.conn.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+			slog.Error("failed to close RabbitMQ connection", "err", err)
+		}
 	}
 }

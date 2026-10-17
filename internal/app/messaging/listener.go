@@ -29,7 +29,11 @@ func (ml *MessageListener) StartListening(ctx context.Context, queueName string,
 	go func() {
 		for {
 			select {
-			case msg := <-msgs:
+			case msg, ok := <-msgs:
+				if !ok {
+					log.Println("RabbitMQ message channel closed")
+					return
+				}
 				if err := handler.HandleMessage(ctx, msg); err != nil {
 					log.Println("Error handling message:", err)
 				}

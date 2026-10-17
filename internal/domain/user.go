@@ -35,6 +35,7 @@ func (u *User) Validate() error {
 
 type UserRepository interface {
 	FindUserByUsername(username string) (User, error)
+	FindUserByEmail(email string) (User, error)
 	Add(user User) (User, error)
 }
 

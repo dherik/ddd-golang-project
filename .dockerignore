@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+.vscode
+coverage.out
+main
+docs
+tests
+*.md
+docker-compose.yml

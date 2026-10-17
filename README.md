@@ -12,7 +12,7 @@ The code still has a lot of small issues and new things to implement. You can ch
 
 Prerequisites:
 - [Docker](https://www.docker.com)
-- [Go](https://go.dev). I recommend to use [GVM](https://github.com/moovweb/gvm) to manage the Go versions
+- [Go](https://go.dev) 1.27.2 or newer. I recommend to use [GVM](https://github.com/moovweb/gvm) to manage the Go versions
 
 You can run the project using choosing on the following methods:
 - Docker Compose;

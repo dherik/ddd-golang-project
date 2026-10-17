@@ -1,26 +1,28 @@
-# Use the official Go image as a base
-FROM golang:1.22 as builder
+# syntax=docker/dockerfile:1
 
-# Set the working directory inside the container
-WORKDIR /app
+FROM golang:1.27.2-alpine AS builder
 
-# Copy the Go module files and download dependencies
+WORKDIR /src
+
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the rest of the application source code
 COPY . .
 
-# Build the Go application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /main
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/main .
 
-# Create a minimal runtime image
-# FROM alpine:latest
-# WORKDIR /app
-# COPY --from=builder /app/main .
+FROM alpine:3.22
 
-# Expose a port if your application listens on a specific port
-# EXPOSE 8080
+RUN apk add --no-cache ca-certificates \
+    && addgroup -S app \
+    && adduser -S -G app -u 10001 app
 
-# Run the application
-CMD ["/main"]
+WORKDIR /app
+
+COPY --from=builder /out/main /main
+COPY --from=builder /src/config.yaml /app/config.yaml
+
+USER app
+EXPOSE 3333
+
+ENTRYPOINT ["/main"]

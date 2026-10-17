@@ -7,4 +7,10 @@ database:
   password: "pgpassword"
   name: "dddtasks"
 jwt:
+  # Override this value with the JWT_SECRET environment variable in production.
   secret: "51a9e81e-7107-4fc8-a7fb-a22c8a074055"
+broker:
+  host: "localhost"
+  port: 5672
+  user: "guest"
+  password: "guest"

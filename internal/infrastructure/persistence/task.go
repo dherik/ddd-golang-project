@@ -1,6 +1,8 @@
 package persistence
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -109,6 +111,10 @@ func (r *TaskSqlRepository) GetByID(id int) (domain.Task, error) {
 	var task Task
 	err := db.QueryRow(`SELECT id, user_id, description, created_at FROM task 
 		where id = $1`, id).Scan(&task.Id, &task.UserId, &task.Description, &task.CreatedAt)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Task{}, domain.ErrTaskNotFound
+	}
 
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("failed to execute query: %w", err)

@@ -27,7 +27,7 @@ func (h *UserHandler) createUser(c echo.Context) error {
 
 	_, err := h.UserService.createUser(u)
 	if err != nil {
-		if errors.Is(err, ErrUserAlreadyExists) {
+		if errors.Is(err, ErrUserAlreadyExists) || errors.Is(err, ErrEmailAlreadyExists) {
 			return echo.NewHTTPError(http.StatusConflict, err.Error())
 		}
 

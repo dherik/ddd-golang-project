@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
@@ -64,11 +63,28 @@ func (r *UserSqlRepository) FindUserByUsername(username string) (domain.User, er
 	db := r.pgsql.connect()
 
 	var user User
-	err := db.QueryRow(`SELECT id, username, email, password, created_at FROM users 
+	err := db.QueryRow(`SELECT id, username, email, password, created_at FROM users
 		where username = $1`, username).Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt)
 
-	if err == sql.ErrNoRows {
-		slog.Error("user not found", "username", username)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.User{}, ErrUserNotFound
+	}
+
+	if err != nil {
+		return domain.User{}, fmt.Errorf("failed reading rows: %w", err)
+	}
+
+	return toUserDomain(user), nil
+}
+
+func (r *UserSqlRepository) FindUserByEmail(email string) (domain.User, error) {
+	db := r.pgsql.connect()
+
+	var user User
+	err := db.QueryRow(`SELECT id, username, email, password, created_at FROM users
+		where email = $1`, email).Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt)
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return domain.User{}, ErrUserNotFound
 	}
 

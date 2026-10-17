@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
@@ -33,7 +34,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "username or password is empty")
 	}
 
-	authorized, err := h.UserService.login(creds.Username, creds.Password)
+	user, authorized, err := h.UserService.login(creds.Username, creds.Password)
 	if err != nil {
 		if errors.Is(err, persistence.ErrUserNotFound) {
 			return echo.NewHTTPError(http.StatusUnauthorized, "user not found")
@@ -44,11 +45,15 @@ func (h *LoginHandler) login(c echo.Context) error {
 		return echo.ErrUnauthorized
 	}
 
-	expirationTime := time.Now().Add(time.Hour * 72)
+	now := time.Now().UTC()
+	expirationTime := now.Add(time.Hour * 72)
 	claims := &jwtCustomClaims{
-		creds.Username, //FIXME get user's name
-		creds.Username, //FIXME get user's email
-		jwt.RegisteredClaims{
+		UserID: user.Id,
+		Name:   user.Username,
+		Email:  user.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.Itoa(user.Id),
+			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
 	}
@@ -63,6 +68,7 @@ func (h *LoginHandler) login(c echo.Context) error {
 	loginResponse := LoginResponse{
 		Token:     tokenString,
 		ExpiresAt: expirationTime,
+		UserID:    user.Id,
 	}
 
 	return c.JSON(http.StatusOK, loginResponse)

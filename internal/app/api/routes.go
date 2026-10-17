@@ -38,8 +38,9 @@ type UserResponse struct {
 // jwtCustomClaims are custom claims extending default ones.
 // See https://github.com/golang-jwt/jwt for more examples
 type jwtCustomClaims struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	UserID int    `json:"userId"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -62,7 +63,6 @@ func NewRouter(taskHandler TaskHandler, loginHandler LoginHandler, userHandler U
 func (r *Routes) SetupRoutes(e *echo.Echo) {
 
 	e.HTTPErrorHandler = customHTTPErrorHandler
-	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {

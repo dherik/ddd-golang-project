@@ -6,8 +6,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3333:3333"  # Map the application's port to a host port if needed
-    volumes:
-      - .:/app      # Mount the current directory into the container for development (optional)
     environment:
       - DB_HOST=postgres
       - BROKER_HOST=rabbitmq
