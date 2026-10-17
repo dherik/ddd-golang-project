@@ -1,6 +1,9 @@
 package domain
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestInvalidPassword(t *testing.T) {
 	tests := []struct {
@@ -42,9 +45,7 @@ func TestInvalidPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			password := Password{PlainPassword: tt.password}
-			err := password.Validate()
+			err := validatePassword(tt.password)
 
 			if err == nil {
 				t.Fatalf("wanted an error but didn't get one")
@@ -57,36 +58,40 @@ func TestInvalidPassword(t *testing.T) {
 	}
 }
 
-func TestValidPassword(t *testing.T) {
+func TestPasswordHashingAndVerification(t *testing.T) {
+	password, err := NewPassword("_1ValidPassword", fakeHasher{})
+	if err != nil {
+		t.Fatalf("unexpected error creating password: %v", err)
+	}
 
-	t.Run("check password is valid", func(t *testing.T) {
+	if got, want := password.Hash(), "hashed:_1ValidPassword"; got != want {
+		t.Errorf("got hash %q, want %q", got, want)
+	}
 
-		password := Password{PlainPassword: "some_password"}
-		if err := password.hashPassword(); err != nil {
-			t.Fatalf("failed to hash password: %v", err)
-		}
+	if !password.Verify("_1ValidPassword", fakeHasher{}) {
+		t.Error("the correct password did not verify")
+	}
 
-		got := password.CheckPasswordHash("some_password")
-		want := true
+	if password.Verify("another_password", fakeHasher{}) {
+		t.Error("a wrong password verified")
+	}
+}
 
-		if got != want {
-			t.Errorf("got %t want %t", got, want)
-		}
-	})
+func TestNewPasswordHasherError(t *testing.T) {
+	_, err := NewPassword("_1ValidPassword", fakeHasher{hashErr: errors.New("no entropy")})
+	if err == nil {
+		t.Fatal("wanted an error but didn't get one")
+	}
+}
 
-	t.Run("check password is not valid", func(t *testing.T) {
+func TestRehydratedPasswordVerifies(t *testing.T) {
+	password := RehydratePassword("hashed:_1ValidPassword")
 
-		password := Password{PlainPassword: "some_password"}
-		if err := password.hashPassword(); err != nil {
-			t.Fatalf("failed to hash password: %v", err)
-		}
+	if !password.Verify("_1ValidPassword", fakeHasher{}) {
+		t.Error("the rehydrated password did not verify")
+	}
 
-		got := password.CheckPasswordHash("another_password")
-		want := false
-
-		if got != want {
-			t.Errorf("got %t want %t", got, want)
-		}
-	})
-
+	if password.Verify("another_password", fakeHasher{}) {
+		t.Error("a wrong password verified against a rehydrated password")
+	}
 }

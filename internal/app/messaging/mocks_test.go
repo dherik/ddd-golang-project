@@ -1,9 +1,17 @@
 package messaging
 
 import (
+	"time"
+
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/stretchr/testify/mock"
 )
+
+type fixedClock struct {
+	now time.Time
+}
+
+func (c fixedClock) Now() time.Time { return c.now }
 
 type mockTaskRepository struct {
 	mock.Mock

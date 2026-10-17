@@ -100,20 +100,24 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) error {
 		return NewHTTPError(http.StatusBadRequest, "failed to create the task for the user")
 	}
 
-	created, err := domain.NewTask(userId, t.Description)
+	err = h.TaskService.CreateTask(userId, t.Description)
 	if err != nil {
-		slog.Error("invalid task data", "err", err)
-		return NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	err = h.TaskService.AddTaskToUser(created)
-	if err != nil {
+		if isTaskValidationError(err) {
+			slog.Error("invalid task data", "err", err)
+			return NewHTTPError(http.StatusBadRequest, err.Error())
+		}
 		slog.Error("failed adding task to user", "err", err)
 		return NewHTTPError(http.StatusInternalServerError, "failed to create the task for the user")
 	}
 
 	writeNoContent(w, http.StatusCreated)
 	return nil
+}
+
+func isTaskValidationError(err error) bool {
+	return errors.Is(err, domain.ErrDescriptionInvalid) ||
+		errors.Is(err, domain.ErrDescriptionTooLong) ||
+		errors.Is(err, domain.ErrUserIdInvalid)
 }
 
 func toResponseArray(tasks []domain.Task) []TaskResponse {

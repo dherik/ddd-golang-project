@@ -58,7 +58,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 		HasMore: false,
 	}, nil)
 
-	svc := task.NewService(mockRepo)
+	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
@@ -82,7 +82,7 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 
 func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
-	svc := task.NewService(mockRepo)
+	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=invalid&endDate=2024-12-31T00:00:00Z", nil)
@@ -100,7 +100,7 @@ func TestTaskHandler_GetTasks_InvalidStartDate(t *testing.T) {
 
 func TestTaskHandler_GetTasks_UnauthorizedWithoutClaims(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
-	svc := task.NewService(mockRepo)
+	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T00:00:00Z", nil)
@@ -123,7 +123,7 @@ func TestTaskHandler_GetTaskByID(t *testing.T) {
 		Id: 42, UserId: "1", Description: "Task 42", CreatedAt: now,
 	}, nil)
 
-	svc := task.NewService(mockRepo)
+	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
@@ -148,7 +148,7 @@ func TestTaskHandler_GetTaskByID_NotFound(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{}, domain.ErrTaskNotFound)
 
-	svc := task.NewService(mockRepo)
+	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
@@ -172,7 +172,7 @@ func TestTaskHandler_CreateTaskIgnoresUserIdFromBody(t *testing.T) {
 		return task.UserId == "1" && task.Description == "Task from token"
 	})).Return(nil)
 
-	svc := task.NewService(mockRepo)
+	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)
 
 	body := strings.NewReader(`{"userId":"2","description":"Task from token"}`)

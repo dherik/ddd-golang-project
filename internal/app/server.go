@@ -16,6 +16,7 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
+	"github.com/dherik/ddd-golang-project/internal/infrastructure/security"
 )
 
 type Server struct {
@@ -24,6 +25,10 @@ type Server struct {
 	HTTPPort           int
 	JWTSecret          string
 }
+
+type systemClock struct{}
+
+func (systemClock) Now() time.Time { return time.Now().UTC() }
 
 const requestIDKey = "request_id"
 
@@ -36,8 +41,10 @@ func (s *Server) Start() {
 	}
 	taskRepository := persistence.NewTaskRepository(pgsql)
 	userRepository := persistence.NewUserRepository(pgsql)
-	taskService := task.NewService(taskRepository)
-	userService := api.NewUserService(userRepository)
+	hasher := security.NewBcryptHasher()
+	clock := systemClock{}
+	taskService := task.NewService(taskRepository, clock)
+	userService := api.NewUserService(userRepository, hasher, clock)
 	taskHandler := api.NewTaskHandler(taskService)
 	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
 	userHandler := api.NewUserHandler(userService)

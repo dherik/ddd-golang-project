@@ -19,7 +19,7 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 		return task.UserId == "1" && task.Description == "Pay invoice INV-42 by 2026-11-01"
 	})).Return(nil)
 
-	handler := NewInvoiceDueHandler(task.NewService(mockRepo))
+	handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
 	err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`))
 
@@ -67,7 +67,7 @@ func TestInvoiceDueEventReminderWording(t *testing.T) {
 				return task.Description == tt.description
 			})).Return(nil)
 
-			handler := NewInvoiceDueHandler(task.NewService(mockRepo))
+			handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
 			err := handler.HandleMessage(testMessage(tt.payload))
 
@@ -96,7 +96,7 @@ func TestInvoiceDueEventInvalidPayloadIsPermanent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(mockTaskRepository)
-			handler := NewInvoiceDueHandler(task.NewService(mockRepo))
+			handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
 			err := handler.HandleMessage(testMessage(tt.payload))
 
@@ -115,7 +115,7 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 		payload := fmt.Sprintf(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01","issuer":%q}`, longIssuer)
 
 		mockRepo := new(mockTaskRepository)
-		handler := NewInvoiceDueHandler(task.NewService(mockRepo))
+		handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
 		err := handler.HandleMessage(testMessage(payload))
 
@@ -127,7 +127,7 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 		mockRepo := new(mockTaskRepository)
 		mockRepo.On("AddTaskToUser", mock.Anything, mock.Anything).
 			Return(fmt.Errorf("database unavailable"))
-		handler := NewInvoiceDueHandler(task.NewService(mockRepo))
+		handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
 		err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01"}`))
 

@@ -2,7 +2,6 @@ package domain
 
 import (
 	"errors"
-	"log/slog"
 	"time"
 )
 
@@ -18,27 +17,24 @@ type Task struct {
 	CreatedAt   time.Time
 }
 
-func NewTask(userId string, description string) (Task, error) {
+func NewTask(userId string, description string, clock Clock) (Task, error) {
 
 	if len(description) == 0 {
-		slog.Error("invalid description: value is empty")
 		return Task{}, ErrDescriptionInvalid
 	}
 
 	if userId == "" {
-		slog.Error("invalid user id", "userId", userId)
 		return Task{}, ErrUserIdInvalid
 	}
 
 	if len(description) > 1024 {
-		slog.Error("invalid description: value is too long", "description", description)
 		return Task{}, ErrDescriptionTooLong
 	}
 
 	return Task{
 		UserId:      userId,
 		Description: description,
-		CreatedAt:   time.Now().UTC(),
+		CreatedAt:   clock.Now(),
 	}, nil
 }
 

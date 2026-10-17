@@ -14,6 +14,14 @@ type mockTaskRepository struct {
 	mock.Mock
 }
 
+type fixedClock struct {
+	now time.Time
+}
+
+func (c fixedClock) Now() time.Time { return c.now }
+
+var testClock = fixedClock{now: time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)}
+
 func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Task, error) {
 	args := m.Called(id, userId)
 	return args.Get(0).(domain.Task), args.Error(1)
@@ -28,6 +36,29 @@ func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage,
 	return args.Get(0).(domain.TaskPage), args.Error(1)
 }
 
+func TestService_CreateTask(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
+		return task.UserId == "1" &&
+			task.Description == "some description" &&
+			task.CreatedAt.Equal(testClock.now)
+	})).Return(nil)
+
+	err := NewService(mockRepo, testClock).CreateTask("1", "some description")
+
+	require.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestService_CreateTask_InvalidDescription(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+
+	err := NewService(mockRepo, testClock).CreateTask("1", "")
+
+	require.ErrorIs(t, err, domain.ErrDescriptionInvalid)
+	mockRepo.AssertNotCalled(t, "AddTaskToUser", mock.Anything, mock.Anything)
+}
+
 func TestService_FindTasks(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -40,7 +71,7 @@ func TestService_FindTasks(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{Tasks: expectedTasks, HasMore: false}, nil)
 
-	svc := NewService(mockRepo)
+	svc := NewService(mockRepo, testClock)
 	page, err := svc.FindTasks(query)
 
 	require.NoError(t, err)
@@ -60,7 +91,7 @@ func TestService_FindTasks_RepositoryError(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{}, assert.AnError)
 
-	svc := NewService(mockRepo)
+	svc := NewService(mockRepo, testClock)
 	_, err := svc.FindTasks(query)
 
 	require.Error(t, err)
@@ -74,7 +105,7 @@ func TestService_GetTaskByID(t *testing.T) {
 		Id: 42, UserId: "1", Description: "Task 42", CreatedAt: now,
 	}, nil)
 
-	svc := NewService(mockRepo)
+	svc := NewService(mockRepo, testClock)
 	task, err := svc.GetTaskByID("1", 42)
 
 	require.NoError(t, err)
@@ -88,7 +119,7 @@ func TestService_GetTaskByID_NotFound(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{}, domain.ErrTaskNotFound)
 
-	svc := NewService(mockRepo)
+	svc := NewService(mockRepo, testClock)
 	_, err := svc.GetTaskByID("1", 42)
 
 	assert.ErrorIs(t, err, domain.ErrTaskNotFound)

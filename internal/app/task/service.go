@@ -12,14 +12,19 @@ import (
 // transport drags the other's shapes across the seam.
 type Service struct {
 	taskRepository domain.TaskRepository
+	clock          domain.Clock
 }
 
-func NewService(taskRepository domain.TaskRepository) *Service {
-	return &Service{taskRepository: taskRepository}
+func NewService(taskRepository domain.TaskRepository, clock domain.Clock) *Service {
+	return &Service{taskRepository: taskRepository, clock: clock}
 }
 
-func (s *Service) AddTaskToUser(task domain.Task) error {
-	if err := s.taskRepository.AddTaskToUser(task.UserId, task); err != nil {
+func (s *Service) CreateTask(userId, description string) error {
+	task, err := domain.NewTask(userId, description, s.clock)
+	if err != nil {
+		return err
+	}
+	if err := s.taskRepository.AddTaskToUser(userId, task); err != nil {
 		return fmt.Errorf("failed to add task to user: %w", err)
 	}
 	return nil

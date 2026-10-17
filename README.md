@@ -42,9 +42,9 @@ The project follows the classic DDD dependency rule: inner layers define the con
 └──────────────────────┘
 ```
 
-- **Domain** (`internal/domain`): entities, validation rules, and repository interfaces. No external dependencies.
+- **Domain** (`internal/domain`): entities, validation rules, repository interfaces, and the password-hashing and clock ports. No third-party dependencies.
 - **Application** (`internal/app`): HTTP handlers, services/use cases, DTOs, routes, and message consumers. Depends on domain and (through interfaces) infrastructure.
-- **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, and external integrations. Depends on domain.
+- **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, password hashing, and external integrations. Depends on domain.
 - **Config** (`internal/config`): loads `config.yaml` and applies environment variable overrides.
 
 ### Where to add new code
@@ -56,6 +56,7 @@ The project follows the classic DDD dependency rule: inner layers define the con
 | Use case / service | `internal/app/api` (or a dedicated use case package as the project grows) |
 | HTTP handler, request/response DTO, route | `internal/app/api` |
 | Repository implementation | `internal/infrastructure/persistence` |
+| Password hashing or clock adapter | `internal/infrastructure/security` (port in `internal/domain`) |
 | External API client | `internal/infrastructure/external` |
 | Message consumer | `internal/app/messaging` + `internal/infrastructure/messaging` |
 
@@ -76,11 +77,12 @@ The project follows the classic DDD dependency rule: inner layers define the con
 │   │   ├── messaging       # Message listener and handlers
 │   │   └── server.go       # Application wiring and server startup
 │   ├── config              # Configuration loader
-│   ├── domain              # Domain entities and repository interfaces
+│   ├── domain              # Domain entities, ports, and repository interfaces
 │   └── infrastructure
 │       ├── external        # External integrations
 │       ├── messaging       # RabbitMQ client
-│       └── persistence     # PostgreSQL repositories
+│       ├── persistence     # PostgreSQL repositories
+│       └── security        # bcrypt password hasher
 ├── tests
 │   ├── integration         # Testcontainers-based integration tests
 │   └── load                # k6 load tests
@@ -330,7 +332,7 @@ The DDD design and the integration testing setup are the two areas this project 
 
 ### Architecture and code quality
 
-- Domain models totally independent from the other layers: domain objects are not used in the persistence or API layers.
+- Domain models independent from the other layers: persistence rows and transport DTOs do not leak into the domain.
 - Classic DDD layering with the dependency rule pointing inward (Application → Domain, Infrastructure → Domain, Domain → nothing).
 - Dependency injection through constructors and small interfaces.
 - Short, focused names for Go packages.
@@ -348,7 +350,7 @@ The DDD design and the integration testing setup are the two areas this project 
 - REST API following common conventions: plural nouns, no verbs, hierarchy, and RFC 3339 dates.
 - Endpoints protected with JWT authentication; the token carries `userId`, `name`, and `email`.
 - Consistent JSON error responses with meaningful HTTP status codes.
-- Passwords hashed with bcrypt at the library default cost.
+- Passwords hashed with bcrypt in an infrastructure adapter at the library default cost.
 - `govulncheck` integrated in the Makefile for dependency vulnerability scanning.
 
 ### Developer experience and tooling

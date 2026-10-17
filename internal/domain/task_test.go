@@ -7,7 +7,7 @@ import (
 func TestNewTask(t *testing.T) {
 
 	t.Run("description is valid", func(t *testing.T) {
-		task, err := NewTask("1", "some description")
+		task, err := NewTask("1", "some description", fixedClock{now: fixedNow})
 
 		if err != nil {
 			t.Fatalf("unexpected error creating task: %v", err)
@@ -20,10 +20,13 @@ func TestNewTask(t *testing.T) {
 			t.Errorf("got %q want %q", got, want)
 		}
 
+		if !task.CreatedAt.Equal(fixedNow) {
+			t.Errorf("got CreatedAt %v, want %v", task.CreatedAt, fixedNow)
+		}
 	})
 
 	t.Run("description is invalid", func(t *testing.T) {
-		_, err := NewTask("1", "")
+		_, err := NewTask("1", "", fixedClock{now: fixedNow})
 
 		got := err
 		want := ErrDescriptionInvalid
@@ -38,7 +41,7 @@ func TestNewTask(t *testing.T) {
 	})
 
 	t.Run("description is too long", func(t *testing.T) {
-		_, err := NewTask("1", "a"+string(make([]byte, 1025)))
+		_, err := NewTask("1", "a"+string(make([]byte, 1025)), fixedClock{now: fixedNow})
 
 		got := err
 		want := ErrDescriptionTooLong
@@ -53,7 +56,7 @@ func TestNewTask(t *testing.T) {
 	})
 
 	t.Run("userId is invalid", func(t *testing.T) {
-		_, err := NewTask("", "some description")
+		_, err := NewTask("", "some description", fixedClock{now: fixedNow})
 
 		got := err
 		want := ErrUserIdInvalid

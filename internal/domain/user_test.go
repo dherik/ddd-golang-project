@@ -1,14 +1,14 @@
 package domain
 
 import (
+	"errors"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestNewUser(t *testing.T) {
 	t.Run("valid user", func(t *testing.T) {
-		user, err := NewUser("john", "john@example.com", "_1ValidPassword")
+		user, err := NewUser("john", "john@example.com", "_1ValidPassword", fakeHasher{}, fixedClock{now: fixedNow})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -18,44 +18,51 @@ func TestNewUser(t *testing.T) {
 		if user.Email != "john@example.com" {
 			t.Errorf("got %q, want %q", user.Email, "john@example.com")
 		}
-		if user.CreatedAt.IsZero() {
-			t.Error("CreatedAt should not be zero")
+		if !user.CreatedAt.Equal(fixedNow) {
+			t.Errorf("got CreatedAt %v, want %v", user.CreatedAt, fixedNow)
 		}
-		if user.Password.HashPassword == "" {
-			t.Error("HashPassword should not be empty")
+		if got, want := user.Password.Hash(), "hashed:_1ValidPassword"; got != want {
+			t.Errorf("got hash %q, want %q", got, want)
+		}
+	})
+
+	t.Run("hasher failure", func(t *testing.T) {
+		_, err := NewUser("john", "john@example.com", "_1ValidPassword", fakeHasher{hashErr: errors.New("no entropy")}, fixedClock{now: fixedNow})
+		if err == nil {
+			t.Fatal("expected error, got nil")
 		}
 	})
 
 	t.Run("empty username", func(t *testing.T) {
-		_, err := NewUser("", "john@example.com", "_1ValidPassword")
+		_, err := NewUser("", "john@example.com", "_1ValidPassword", fakeHasher{}, fixedClock{now: fixedNow})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
 
 	t.Run("username too long", func(t *testing.T) {
-		_, err := NewUser(strings.Repeat("a", 257), "john@example.com", "_1ValidPassword")
+		_, err := NewUser(strings.Repeat("a", 257), "john@example.com", "_1ValidPassword", fakeHasher{}, fixedClock{now: fixedNow})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
 
 	t.Run("empty email", func(t *testing.T) {
-		_, err := NewUser("john", "", "_1ValidPassword")
+		_, err := NewUser("john", "", "_1ValidPassword", fakeHasher{}, fixedClock{now: fixedNow})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
 
 	t.Run("email too long", func(t *testing.T) {
-		_, err := NewUser("john", strings.Repeat("a", 257)+"@example.com", "_1ValidPassword")
+		_, err := NewUser("john", strings.Repeat("a", 257)+"@example.com", "_1ValidPassword", fakeHasher{}, fixedClock{now: fixedNow})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
 
 	t.Run("weak password", func(t *testing.T) {
-		_, err := NewUser("john", "john@example.com", "weak")
+		_, err := NewUser("john", "john@example.com", "weak", fakeHasher{}, fixedClock{now: fixedNow})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -100,14 +107,12 @@ func TestUserValidate(t *testing.T) {
 }
 
 func TestNewUserCreatedAt(t *testing.T) {
-	before := time.Now().UTC()
-	user, err := NewUser("john", "john@example.com", "_1ValidPassword")
+	user, err := NewUser("john", "john@example.com", "_1ValidPassword", fakeHasher{}, fixedClock{now: fixedNow})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	after := time.Now().UTC()
 
-	if user.CreatedAt.Before(before) || user.CreatedAt.After(after) {
-		t.Error("CreatedAt should be between before and after")
+	if !user.CreatedAt.Equal(fixedNow) {
+		t.Errorf("got CreatedAt %v, want %v", user.CreatedAt, fixedNow)
 	}
 }

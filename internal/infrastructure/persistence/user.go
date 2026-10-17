@@ -31,7 +31,7 @@ func (r *UserSqlRepository) Add(user domain.User) error {
 	db := r.pgsql.connect()
 
 	_, err := db.Exec(`INSERT INTO users(username, email, password, created_at)
-		VALUES($1, $2, $3, $4)`, user.Username, user.Email, user.Password.HashPassword, user.CreatedAt)
+		VALUES($1, $2, $3, $4)`, user.Username, user.Email, user.Password.Hash(), user.CreatedAt)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
@@ -71,7 +71,7 @@ func toUserDomain(userDb User) domain.User {
 		Id:        userDb.Id,
 		Username:  userDb.Username,
 		Email:     userDb.Email,
-		Password:  domain.Password{HashPassword: userDb.Password},
+		Password:  domain.RehydratePassword(userDb.Password),
 		CreatedAt: userDb.CreatedAt,
 	}
 }

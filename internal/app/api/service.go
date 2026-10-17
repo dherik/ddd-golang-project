@@ -15,11 +15,15 @@ var (
 
 type UserService struct {
 	userRepository domain.UserRepository
+	hasher         domain.PasswordHasher
+	clock          domain.Clock
 }
 
-func NewUserService(userRepository domain.UserRepository) *UserService {
+func NewUserService(userRepository domain.UserRepository, hasher domain.PasswordHasher, clock domain.Clock) *UserService {
 	return &UserService{
 		userRepository: userRepository,
+		hasher:         hasher,
+		clock:          clock,
 	}
 }
 
@@ -31,14 +35,14 @@ func (s *UserService) login(username, password string) (domain.User, error) {
 		}
 		return domain.User{}, fmt.Errorf("failed to login: %w", err)
 	}
-	if !user.Password.CheckPasswordHash(password) {
+	if !user.Password.Verify(password, s.hasher) {
 		return domain.User{}, ErrInvalidCredentials
 	}
 	return user, nil
 }
 
 func (s *UserService) createUser(userRequest UserRequest) error {
-	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password)
+	newUser, err := domain.NewUser(userRequest.Username, userRequest.Email, userRequest.Password, s.hasher, s.clock)
 	if err != nil {
 		return fmt.Errorf("failed creating new user: %w", err)
 	}

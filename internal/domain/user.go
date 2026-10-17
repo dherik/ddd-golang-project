@@ -3,9 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
-	"unicode"
 )
 
 var (
@@ -44,12 +42,12 @@ type UserRepository interface {
 	Add(user User) error
 }
 
-func NewUser(username, email, plainPassword string) (User, error) {
+func NewUser(username, email, plainPassword string, hasher PasswordHasher, clock Clock) (User, error) {
 
 	user := User{
 		Username:  username,
 		Email:     email,
-		CreatedAt: time.Now().UTC(),
+		CreatedAt: clock.Now(),
 	}
 
 	err := user.Validate()
@@ -57,47 +55,12 @@ func NewUser(username, email, plainPassword string) (User, error) {
 		return User{}, fmt.Errorf("failed creating the user: %w", err)
 	}
 
-	password := Password{PlainPassword: plainPassword}
-	err = password.Validate()
-
+	password, err := NewPassword(plainPassword, hasher)
 	if err != nil {
 		return User{}, fmt.Errorf("failed creating the password: %w", err)
-	}
-
-	if err = password.hashPassword(); err != nil {
-		return User{}, fmt.Errorf("failed hashing the password: %w", err)
 	}
 
 	user.Password = password
 
 	return user, nil
-}
-
-func hasSpecialCharacter(s string) bool {
-	return strings.ContainsAny(s, "!@#$%^&*()_+-=")
-}
-
-func containsNumber(s string) bool {
-	for _, char := range s {
-		if unicode.IsDigit(char) {
-			return true
-		}
-	}
-	return false
-}
-
-func containsUppercaseAndLowercase(s string) bool {
-	var hasUppercase, hasLowercase bool
-	for _, char := range s {
-		if unicode.IsUpper(char) {
-			hasUppercase = true
-		}
-		if unicode.IsLower(char) {
-			hasLowercase = true
-		}
-		if hasUppercase && hasLowercase {
-			return true
-		}
-	}
-	return false
 }

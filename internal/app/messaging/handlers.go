@@ -13,7 +13,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/dherik/ddd-golang-project/internal/app/task"
-	"github.com/dherik/ddd-golang-project/internal/domain"
 )
 
 const dateOnlyLayout = "2006-01-02"
@@ -53,13 +52,8 @@ func (h *InvoiceDueHandler) HandleMessage(msg *message.Message) error {
 		return Permanent(fmt.Errorf("invalid fields: %w", err))
 	}
 
-	task, err := domain.NewTask(strconv.Itoa(event.UserID), event.ReminderDescription())
-	if err != nil {
-		return fmt.Errorf("unusable reminder: %w", err)
-	}
-
-	if err := h.TaskService.AddTaskToUser(task); err != nil {
-		return fmt.Errorf("failed persisting payment reminder task: %w", err)
+	if err := h.TaskService.CreateTask(strconv.Itoa(event.UserID), event.ReminderDescription()); err != nil {
+		return fmt.Errorf("failed creating payment reminder task: %w", err)
 	}
 
 	slog.Info("created payment reminder task",
