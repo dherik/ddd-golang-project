@@ -21,3 +21,5 @@ An earlier framing — "create a reminder task for user X" — put the user id a
 - Events referencing a user this service does not know are skipped with a clear log (the `task.user_id` foreign key would otherwise fail with a cryptic error).
 - The consumer is auto-ack: a handler failure loses the message. Accepted for reminder semantics.
 - The payload (`invoiceId`, `userId`, `dueDate`, optional `issuer`/`amount`/`currency`) is a cross-service contract owned jointly with the billing service.
+
+Update: the last two consequences were superseded by [ADR-0003](0003-dead-letter-failed-event-consumption.md) — consumers now run manual ack, and unconsumable events are dead-lettered rather than skipped or lost.

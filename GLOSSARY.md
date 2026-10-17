@@ -4,6 +4,24 @@ A small task-management service where each user owns a private list of tasks.
 
 ## Language
 
+### Event consumption
+
+**Dead-letter queue**:
+A parking queue where this service puts an event it could not consume, so nothing vanishes silently and the failure can be inspected.
+_Avoid_: discard pile, error queue
+
+**Poison message**:
+An event this service can never consume successfully, such as a malformed invoice due event. It goes straight to the dead-letter queue without retrying.
+_Avoid_: bad message, invalid event
+
+**Transient failure**:
+A failure that may succeed on a later attempt, such as the database being briefly unavailable.
+_Avoid_: temporary error, retryable error
+
+**Permanent failure**:
+A failure that no retry can fix, so the event is dead-lettered immediately.
+_Avoid_: fatal error, hard failure
+
 ### Billing events
 
 **Invoice due event**:
