@@ -255,6 +255,7 @@ Task ownership is enforced in the persistence layer: a user can never read or cr
 - `limit` defaults to `20` and accepts `1` to `100`. A value outside that range returns `400`; it is never clamped.
 - `offset` defaults to `0` and accepts any non-negative integer. An offset past the end returns an empty page with `hasMore: false`.
 - `startDate` and `endDate` are optional, independent and inclusive; omit either to leave that side of the range unbounded.
+- An empty parameter value is treated as absent.
 - There is no total count and no page number.
 
 Pagination is offset-based. A task created between page requests shifts later rows down, so the last task of one page can reappear at the top of the next. To freeze a walk, send the `createdAt` of the first page's newest task as `endDate` on every subsequent request.

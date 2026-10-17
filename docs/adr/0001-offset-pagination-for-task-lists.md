@@ -17,7 +17,7 @@ The task list is filtered by user, optionally by an inclusive date range, and or
 
 ## Consequences
 
-- A task inserted between page requests shifts later rows down, so the last task of a page can reappear at the top of the next. This is accepted. A client that needs a frozen walk pins `endDate` to the first page's upper bound; no new parameter is required.
+- A task inserted between page requests shifts later rows down, so the last task of a page can reappear at the top of the next. This is accepted. A client that needs a frozen walk pins `endDate` to the `createdAt` of the first page's newest task; no new parameter is required.
 - There is no total count and no page number, so clients cannot build a "page 3 of 12" view.
 - `OFFSET` costs more as the offset grows. Acceptable for a per-user list bounded by a date range.
 - The choice rests on the list being append-only. If tasks become deletable or editable through the API, drift stops being insert-only and a keyset cursor deserves reconsideration.
