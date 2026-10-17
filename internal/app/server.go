@@ -64,6 +64,18 @@ func (s *Server) Start() {
 		log.Fatalf("Failed to start listening to order queue: %v", err)
 	}
 
+	queueInvoiceDue, err := rabbitMQ.DeclareQueueAndBind(
+		"todo-service.events.billing.invoice-due", "billing", "invoice-due")
+	if err != nil {
+		log.Fatalf("Failed to declare and bind RabbitMQ queue: %v", err)
+	}
+
+	invoiceDueHandler := listener.NewInvoiceDueHandler(taskService)
+
+	if err := messageListener.StartListening(ctx, queueInvoiceDue.Name, invoiceDueHandler); err != nil {
+		log.Fatalf("Failed to start listening to invoice due queue: %v", err)
+	}
+
 	setupSlog()
 
 	mux := http.NewServeMux()

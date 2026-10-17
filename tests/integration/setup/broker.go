@@ -17,6 +17,8 @@ import (
 var (
 	setupBrokerOnce    sync.Once
 	RabbitMQDataSource mq.RabbitMQDataSource
+	brokerContainer    *rabbitmq.RabbitMQContainer
+	brokerCtx          context.Context
 )
 
 func SetupRabbitMQ() {
@@ -28,13 +30,22 @@ func SetupRabbitMQ() {
 			testcontainers.WithImage("rabbitmq:3-management-alpine"),
 			rabbitmq.WithAdminPassword("guest"),
 			rabbitmq.WithAdminPassword("guest"),
-			testcontainers.WithAfterReadyCommand(Exchange{
-				Name:       "calendar",
-				Type:       "fanout",
-				AutoDelete: false,
-				Durable:    true,
-				Internal:   false,
-			}),
+			testcontainers.WithAfterReadyCommand(
+				Exchange{
+					Name:       "calendar",
+					Type:       "fanout",
+					AutoDelete: false,
+					Durable:    true,
+					Internal:   false,
+				},
+				Exchange{
+					Name:       "billing",
+					Type:       "direct",
+					AutoDelete: false,
+					Durable:    true,
+					Internal:   false,
+				},
+			),
 			testcontainers.WithWaitStrategy(
 				wait.ForLog("Server startup complete").
 					WithStartupTimeout(30*time.Second)),
@@ -42,6 +53,9 @@ func SetupRabbitMQ() {
 		if err != nil {
 			log.Fatalf("failed to start RabbitMQ container: %s", err)
 		}
+
+		brokerContainer = rabbitmqContainer
+		brokerCtx = ctx
 
 		amqpUrl, err := rabbitmqContainer.AmqpURL(ctx)
 		if err != nil {
