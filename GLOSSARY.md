@@ -4,6 +4,16 @@ A small task-management service where each user owns a private list of tasks.
 
 ## Language
 
+### Billing events
+
+**Invoice due event**:
+A fact published by the external billing service stating that an invoice belonging to a user must be paid by a due date. It carries no instruction.
+_Avoid_: payment command, billing request
+
+**Payment reminder**:
+A task created by this service in reaction to an invoice due event, telling its user to pay the invoice by the due date.
+_Avoid_: billing task, invoice task
+
 ### Pagination
 
 **Task page**:
