@@ -4,6 +4,10 @@ meta {
   seq: 1
 }
 
+docs {
+  A failed login returns 401 with the message "invalid credentials" for both an unknown username and a wrong password.
+}
+
 post {
   url: http://localhost:3333/login
   body: json

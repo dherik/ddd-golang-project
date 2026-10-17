@@ -42,7 +42,7 @@ The project follows the classic DDD dependency rule: inner layers define the con
 └──────────────────────┘
 ```
 
-- **Domain** (`internal/domain`): entities, validation rules, repository interfaces, and the password-hashing and clock ports. No third-party dependencies.
+- **Domain** (`internal/domain`): entities, validation rules, repository interfaces, and the password-hashing and clock ports. No external dependencies (no third-party or outer-layer imports).
 - **Application** (`internal/app`): HTTP handlers, services/use cases, DTOs, routes, and message consumers. Depends on domain and (through interfaces) infrastructure.
 - **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, password hashing, and external integrations. Depends on domain.
 - **Config** (`internal/config`): loads `config.yaml` and applies environment variable overrides.
@@ -321,7 +321,7 @@ The test ramps up to 50 virtual users, logs in as the seeded admin user, and cre
 ## Security notes
 
 - Set `JWT_SECRET` through the environment; the committed value is for local development only.
-- Passwords are hashed with bcrypt at the library default cost.
+- Passwords are hashed with bcrypt in an infrastructure adapter at the library default cost.
 - Tasks are scoped to the authenticated user in every task endpoint.
 - Duplicate usernames and emails are rejected on the database level, not only in application code.
 - `make vulnerability-check` runs `govulncheck` against the module and its dependencies.

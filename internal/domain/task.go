@@ -34,7 +34,7 @@ func NewTask(userId string, description string, clock Clock) (Task, error) {
 	return Task{
 		UserId:      userId,
 		Description: description,
-		CreatedAt:   clock.Now(),
+		CreatedAt:   clock.Now().UTC(),
 	}, nil
 }
 

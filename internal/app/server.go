@@ -26,10 +26,6 @@ type Server struct {
 	JWTSecret          string
 }
 
-type systemClock struct{}
-
-func (systemClock) Now() time.Time { return time.Now().UTC() }
-
 const requestIDKey = "request_id"
 
 var requestIDCounter uint64
@@ -42,7 +38,7 @@ func (s *Server) Start() {
 	taskRepository := persistence.NewTaskRepository(pgsql)
 	userRepository := persistence.NewUserRepository(pgsql)
 	hasher := security.NewBcryptHasher()
-	clock := systemClock{}
+	clock := security.NewSystemClock()
 	taskService := task.NewService(taskRepository, clock)
 	userService := api.NewUserService(userRepository, hasher, clock)
 	taskHandler := api.NewTaskHandler(taskService)

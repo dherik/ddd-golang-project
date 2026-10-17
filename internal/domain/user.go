@@ -47,7 +47,7 @@ func NewUser(username, email, plainPassword string, hasher PasswordHasher, clock
 	user := User{
 		Username:  username,
 		Email:     email,
-		CreatedAt: clock.Now(),
+		CreatedAt: clock.Now().UTC(),
 	}
 
 	err := user.Validate()
