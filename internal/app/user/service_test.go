@@ -1,4 +1,4 @@
-package api
+package user
 
 import (
 	"errors"
@@ -8,6 +8,12 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	testUsername = "john"
+	testEmail    = "john@example.com"
+	testPassword = "_1ValidPassword"
 )
 
 type fixedClock struct {
@@ -47,15 +53,7 @@ func (f *fakeUserRepository) Add(user domain.User) error {
 	return nil
 }
 
-func validUserRequest() UserRequest {
-	return UserRequest{
-		Username: "john",
-		Email:    "john@example.com",
-		Password: "_1ValidPassword",
-	}
-}
-
-func TestUserServiceCreateUser(t *testing.T) {
+func TestServiceCreate(t *testing.T) {
 	var added domain.User
 	findCalled := false
 	repo := &fakeUserRepository{
@@ -69,101 +67,101 @@ func TestUserServiceCreateUser(t *testing.T) {
 		},
 	}
 
-	err := NewUserService(repo, fakePasswordHasher{}, testClock).createUser(validUserRequest())
+	err := NewService(repo, fakePasswordHasher{}, testClock).Create(testUsername, testEmail, testPassword)
 
 	require.NoError(t, err)
-	assert.False(t, findCalled, "createUser must not pre-check the repository")
-	assert.Equal(t, "john", added.Username)
-	assert.Equal(t, "john@example.com", added.Email)
-	assert.Equal(t, "hashed:_1ValidPassword", added.Password.Hash())
+	assert.False(t, findCalled, "Create must not pre-check the repository")
+	assert.Equal(t, testUsername, added.Username)
+	assert.Equal(t, testEmail, added.Email)
+	assert.Equal(t, "hashed:"+testPassword, added.Password.Hash())
 	assert.True(t, added.CreatedAt.Equal(testClock.now))
 }
 
-func TestUserServiceCreateUserUsernameConflictOnInsert(t *testing.T) {
+func TestServiceCreateUsernameConflictOnInsert(t *testing.T) {
 	repo := &fakeUserRepository{
 		add: func(user domain.User) error {
 			return domain.ErrUsernameAlreadyExists
 		},
 	}
 
-	err := NewUserService(repo, fakePasswordHasher{}, testClock).createUser(validUserRequest())
+	err := NewService(repo, fakePasswordHasher{}, testClock).Create(testUsername, testEmail, testPassword)
 
-	assert.ErrorIs(t, err, ErrUserAlreadyExists)
+	assert.ErrorIs(t, err, ErrUsernameTaken)
 }
 
-func TestUserServiceCreateUserEmailConflictOnInsert(t *testing.T) {
+func TestServiceCreateEmailConflictOnInsert(t *testing.T) {
 	repo := &fakeUserRepository{
 		add: func(user domain.User) error {
 			return domain.ErrEmailAlreadyExists
 		},
 	}
 
-	err := NewUserService(repo, fakePasswordHasher{}, testClock).createUser(validUserRequest())
+	err := NewService(repo, fakePasswordHasher{}, testClock).Create(testUsername, testEmail, testPassword)
 
-	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+	assert.ErrorIs(t, err, ErrEmailTaken)
 }
 
-func TestUserServiceCreateUserRepositoryErrorIsNotConflict(t *testing.T) {
+func TestServiceCreateRepositoryErrorIsNotConflict(t *testing.T) {
 	repo := &fakeUserRepository{
 		add: func(user domain.User) error {
 			return errors.New("database unavailable")
 		},
 	}
 
-	err := NewUserService(repo, fakePasswordHasher{}, testClock).createUser(validUserRequest())
+	err := NewService(repo, fakePasswordHasher{}, testClock).Create(testUsername, testEmail, testPassword)
 
 	require.Error(t, err)
-	assert.NotErrorIs(t, err, ErrUserAlreadyExists)
-	assert.NotErrorIs(t, err, ErrEmailAlreadyExists)
+	assert.NotErrorIs(t, err, ErrUsernameTaken)
+	assert.NotErrorIs(t, err, ErrEmailTaken)
 }
 
-func TestUserServiceLogin(t *testing.T) {
-	user, err := domain.NewUser("john", "john@example.com", "_1ValidPassword", fakePasswordHasher{}, testClock)
+func TestServiceLogin(t *testing.T) {
+	stored, err := domain.NewUser(testUsername, testEmail, testPassword, fakePasswordHasher{}, testClock)
 	require.NoError(t, err)
 
 	repo := &fakeUserRepository{
 		findByUsername: func(username string) (domain.User, error) {
-			return user, nil
+			return stored, nil
 		},
 	}
 
-	got, err := NewUserService(repo, fakePasswordHasher{}, testClock).login("john", "_1ValidPassword")
+	got, err := NewService(repo, fakePasswordHasher{}, testClock).Login(testUsername, testPassword)
 
 	require.NoError(t, err)
-	assert.Equal(t, "john", got.Username)
+	assert.Equal(t, testUsername, got.Username)
 }
 
-func TestUserServiceLoginUnknownUserReturnsInvalidCredentials(t *testing.T) {
+func TestServiceLoginUnknownUserReturnsInvalidCredentials(t *testing.T) {
 	repo := &fakeUserRepository{}
 
-	_, err := NewUserService(repo, fakePasswordHasher{}, testClock).login("missing", "some_password")
+	_, err := NewService(repo, fakePasswordHasher{}, testClock).Login("missing", testPassword)
 
 	assert.ErrorIs(t, err, ErrInvalidCredentials)
 }
 
-func TestUserServiceLoginWrongPasswordReturnsInvalidCredentials(t *testing.T) {
-	user, err := domain.NewUser("john", "john@example.com", "_1ValidPassword", fakePasswordHasher{}, testClock)
+func TestServiceLoginWrongPasswordReturnsInvalidCredentials(t *testing.T) {
+	stored, err := domain.NewUser(testUsername, testEmail, testPassword, fakePasswordHasher{}, testClock)
 	require.NoError(t, err)
 
 	repo := &fakeUserRepository{
 		findByUsername: func(username string) (domain.User, error) {
-			return user, nil
+			return stored, nil
 		},
 	}
 
-	_, err = NewUserService(repo, fakePasswordHasher{}, testClock).login("john", "another_password")
+	_, err = NewService(repo, fakePasswordHasher{}, testClock).Login(testUsername, "another_password")
 
 	assert.ErrorIs(t, err, ErrInvalidCredentials)
 }
 
-func TestUserServiceLoginRepositoryErrorIsNotInvalidCredentials(t *testing.T) {
+func TestServiceLoginRepositoryErrorIsNotInvalidCredentials(t *testing.T) {
 	repo := &fakeUserRepository{
 		findByUsername: func(username string) (domain.User, error) {
 			return domain.User{}, errors.New("database unavailable")
 		},
 	}
 
-	_, err := NewUserService(repo, fakePasswordHasher{}, testClock).login("john", "_1ValidPassword")
+	_, err := NewService(repo, fakePasswordHasher{}, testClock).Login(testUsername, testPassword)
 
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, ErrInvalidCredentials)

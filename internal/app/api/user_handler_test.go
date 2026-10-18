@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dherik/ddd-golang-project/internal/app/user"
 	"github.com/dherik/ddd-golang-project/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func TestUserHandlerCreateUserRepositoryFailureReturns500(t *testing.T) {
 			return errors.New("database unavailable")
 		},
 	}
-	handler := NewUserHandler(NewUserService(repo, fakePasswordHasher{}, testClock))
+	handler := NewUserHandler(user.NewService(repo, fakePasswordHasher{}, testClock))
 
 	body := `{"username":"john","email":"john@example.com","password":"_1ValidPassword"}`
 	req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(body))
@@ -57,7 +58,7 @@ func TestUserHandlerCreateUserConflictReturns409(t *testing.T) {
 					return tt.repoErr
 				},
 			}
-			handler := NewUserHandler(NewUserService(repo, fakePasswordHasher{}, testClock))
+			handler := NewUserHandler(user.NewService(repo, fakePasswordHasher{}, testClock))
 
 			body := `{"username":"john","email":"john@example.com","password":"_1ValidPassword"}`
 			req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(body))

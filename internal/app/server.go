@@ -14,6 +14,7 @@ import (
 	"github.com/dherik/ddd-golang-project/internal/app/api"
 	"github.com/dherik/ddd-golang-project/internal/app/messaging"
 	"github.com/dherik/ddd-golang-project/internal/app/task"
+	"github.com/dherik/ddd-golang-project/internal/app/user"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/clock"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/messaging/rabbitmq"
 	"github.com/dherik/ddd-golang-project/internal/infrastructure/persistence"
@@ -41,7 +42,7 @@ func (s *Server) Start() {
 	hasher := security.NewBcryptHasher()
 	timeSource := clock.NewSystemClock()
 	taskService := task.NewService(taskRepository, timeSource)
-	userService := api.NewUserService(userRepository, hasher, timeSource)
+	userService := user.NewService(userRepository, hasher, timeSource)
 	taskHandler := api.NewTaskHandler(taskService)
 	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
 	userHandler := api.NewUserHandler(userService)

@@ -43,7 +43,7 @@ The project follows the classic DDD dependency rule: inner layers define the con
 ```
 
 - **Domain** (`internal/domain`): entities, validation rules, repository interfaces, and the password-hashing and clock ports. No external dependencies (no third-party or outer-layer imports).
-- **Application** (`internal/app`): HTTP handlers, services/use cases, DTOs, routes, and message consumers. Depends on domain and (through interfaces) infrastructure.
+- **Application** (`internal/app`): HTTP handlers and DTOs, use-case modules (`task`, `user`), routes, and message consumers. Depends on domain and (through interfaces) infrastructure.
 - **Infrastructure** (`internal/infrastructure`): repository implementations, RabbitMQ client, password hashing, system clock, and external integrations. Depends on domain.
 - **Config** (`internal/config`): loads `config.yaml` and applies environment variable overrides.
 
@@ -53,7 +53,7 @@ The project follows the classic DDD dependency rule: inner layers define the con
 |---|---|
 | Entity, value object, domain rule | `internal/domain` |
 | Repository interface | `internal/domain` (next to the entity) |
-| Use case / service | `internal/app/api` (or a dedicated use case package as the project grows) |
+| Use case / service | `internal/app/<use-case>` — one package per use-case module (today `task` and `user`) |
 | HTTP handler, request/response DTO, route | `internal/app/api` |
 | Repository implementation | `internal/infrastructure/persistence` |
 | Password hashing adapter | `internal/infrastructure/security` (port in `internal/domain`) |
@@ -74,8 +74,10 @@ The project follows the classic DDD dependency rule: inner layers define the con
 │   └── bruno               # Bruno collection ready to import
 ├── internal
 │   ├── app
-│   │   ├── api             # Handlers, services, routes, auth helper
+│   │   ├── api             # Handlers, DTOs, routes, auth helper
 │   │   ├── messaging       # Message listener and handlers
+│   │   ├── task            # Task use cases
+│   │   ├── user            # Login and user-creation use cases
 │   │   └── server.go       # Application wiring and server startup
 │   ├── config              # Configuration loader
 │   ├── domain              # Domain entities, ports, and repository interfaces

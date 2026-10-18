@@ -6,15 +6,16 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/app/user"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type LoginHandler struct {
-	UserService *UserService
+	UserService *user.Service
 	JWTSecret   string
 }
 
-func NewLoginHandler(userService *UserService, jwtSecret string) LoginHandler {
+func NewLoginHandler(userService *user.Service, jwtSecret string) LoginHandler {
 	return LoginHandler{
 		UserService: userService,
 		JWTSecret:   jwtSecret,
@@ -32,10 +33,10 @@ func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
 		return NewHTTPError(http.StatusBadRequest, "username or password is empty")
 	}
 
-	user, err := h.UserService.login(creds.Username, creds.Password)
+	loggedIn, err := h.UserService.Login(creds.Username, creds.Password)
 	if err != nil {
-		if errors.Is(err, ErrInvalidCredentials) {
-			return NewHTTPError(http.StatusUnauthorized, ErrInvalidCredentials.Error())
+		if errors.Is(err, user.ErrInvalidCredentials) {
+			return NewHTTPError(http.StatusUnauthorized, user.ErrInvalidCredentials.Error())
 		}
 		return NewHTTPError(http.StatusInternalServerError, "failed to login")
 	}
@@ -43,11 +44,11 @@ func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
 	now := time.Now().UTC()
 	expirationTime := now.Add(time.Hour * 72)
 	claims := &jwtCustomClaims{
-		UserID: user.Id,
-		Name:   user.Username,
-		Email:  user.Email,
+		UserID: loggedIn.Id,
+		Name:   loggedIn.Username,
+		Email:  loggedIn.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   strconv.Itoa(user.Id),
+			Subject:   strconv.Itoa(loggedIn.Id),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
@@ -63,7 +64,7 @@ func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
 	loginResponse := LoginResponse{
 		Token:     tokenString,
 		ExpiresAt: expirationTime,
-		UserID:    user.Id,
+		UserID:    loggedIn.Id,
 	}
 
 	return writeJSON(w, http.StatusOK, loginResponse)
