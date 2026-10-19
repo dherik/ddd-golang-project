@@ -61,7 +61,7 @@ func (s *TaskTestSuite) TestGetByID() {
 
 	token := setup.Login("admin", "some_password")
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/tasks/%d", setup.ServerURL(), 1), nil) //TODO duplicated port, get from s.port (parametrized)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/tasks/%d", setup.ServerURL(), 1), nil)
 	s.NoError(err)
 
 	req.Header.Set("Authorization", "Bearer "+token)
