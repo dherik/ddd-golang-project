@@ -167,7 +167,7 @@ func parseTaskPageOffset(raw string) (int, bool) {
 	return int(offset), true
 }
 
-func bindJSON(r *http.Request, v interface{}) error {
+func bindJSON(r *http.Request, v any) error {
 	if r.Body == nil {
 		return errors.New("empty body")
 	}

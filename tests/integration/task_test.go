@@ -104,7 +104,7 @@ func (s *TaskTestSuite) TestAddTask() {
 
 }
 
-func addTask(s *TaskTestSuite, payload interface{}, token string) *http.Response {
+func addTask(s *TaskTestSuite, payload any, token string) *http.Response {
 	s.T().Helper()
 	requestBody, err := json.Marshal(payload)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/dherik/ddd-golang-project/internal/app/api"
@@ -72,10 +73,8 @@ func waitForDeadLetter(s *TaskTestSuite, queueName, payload string) {
 	for time.Now().Before(deadline) {
 		payloads, err := setup.DeadLetteredPayloads(queueName)
 		s.NoError(err)
-		for _, p := range payloads {
-			if p == payload {
-				return
-			}
+		if slices.Contains(payloads, payload) {
+			return
 		}
 		time.Sleep(200 * time.Millisecond)
 	}

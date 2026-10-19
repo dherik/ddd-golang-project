@@ -37,7 +37,7 @@ func StartServer(dataSource persistence.Datasource, rabbitMQDataSource rabbitmq.
 }
 
 func waitServiceStart(url string, maxRetries int, retryInterval time.Duration) error {
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		// Make a GET request to the /api/health endpoint
 		response, err := http.Get(url + "/api/health")
 		if err == nil && response.StatusCode == http.StatusOK {

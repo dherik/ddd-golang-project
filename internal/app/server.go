@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -30,7 +31,7 @@ type Server struct {
 
 const requestIDKey = "request_id"
 
-var requestIDCounter uint64
+var requestIDCounter atomic.Uint64
 
 func (s *Server) Start() {
 	pgsql, err := persistence.NewPostgreRepository(s.Datasource)
@@ -108,8 +109,8 @@ func setupSlog() {
 }
 
 func chain(h http.Handler, mws ...func(http.Handler) http.Handler) http.Handler {
-	for i := len(mws) - 1; i >= 0; i-- {
-		h = mws[i](h)
+	for _, mw := range slices.Backward(mws) {
+		h = mw(h)
 	}
 	return h
 }
@@ -130,7 +131,7 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get("X-Request-ID")
 		if id == "" {
-			id = strconv.FormatUint(atomic.AddUint64(&requestIDCounter, 1), 36)
+			id = strconv.FormatUint(requestIDCounter.Add(1), 36)
 		}
 		w.Header().Set("X-Request-ID", id)
 		ctx := context.WithValue(r.Context(), requestIDKey, id)

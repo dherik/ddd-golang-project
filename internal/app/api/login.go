@@ -44,14 +44,12 @@ func (h *LoginHandler) login(w http.ResponseWriter, r *http.Request) error {
 	now := time.Now().UTC()
 	expirationTime := now.Add(time.Hour * 72)
 	claims := &jwtCustomClaims{
-		UserID: loggedIn.Id,
-		Name:   loggedIn.Username,
-		Email:  loggedIn.Email,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   strconv.Itoa(loggedIn.Id),
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
+		UserID:    loggedIn.Id,
+		Name:      loggedIn.Username,
+		Email:     loggedIn.Email,
+		Subject:   strconv.Itoa(loggedIn.Id),
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(expirationTime),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

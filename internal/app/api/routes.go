@@ -100,7 +100,7 @@ func requireAuth(jwtSecret string, next func(w http.ResponseWriter, r *http.Requ
 			return ErrUnauthorized
 		}
 
-		token, err := jwt.ParseWithClaims(tokenStr, &jwtCustomClaims{}, func(t *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenStr, &jwtCustomClaims{}, func(t *jwt.Token) (any, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, ErrUnauthorized
 			}
@@ -143,9 +143,9 @@ func CustomHTTPErrorHandler(err error, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"timestamp": time.Now().Format(time.RFC3339),
-		"error": map[string]interface{}{
+		"error": map[string]any{
 			"code":    code,
 			"message": message,
 		},
@@ -153,7 +153,7 @@ func CustomHTTPErrorHandler(err error, w http.ResponseWriter, r *http.Request) {
 }
 
 // writeJSON writes v as compact JSON with the given status code.
-func writeJSON(w http.ResponseWriter, status int, v interface{}) error {
+func writeJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(v)
