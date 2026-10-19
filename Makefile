@@ -27,6 +27,11 @@ upgrade-deps-latest-patch:
 vulnerability-check:
 	GOTOOLCHAIN=go1.27.2 $(GOCMD) run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
+# apply the modernizer fixes suggested by 'go fix'. run 'go fix -diff ./...'
+# first to preview the changes without applying them.
+fix:
+	$(GOCMD) fix ./...
+
 dependency:
 	$(GOCMD) mod download
 
@@ -49,4 +54,4 @@ clean:
 run: build
 	DB_HOST=127.0.0.1 BROKER_HOST=127.0.0.1 ./$(BINARY_NAME)
 
-.PHONY: build test clean
+.PHONY: build test clean fix
