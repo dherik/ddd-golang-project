@@ -5,11 +5,17 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3333:3333"  # Map the application's port to a host port if needed
+      # Intentionally published on 3333 so the API stays reachable from the host
+      # (curl, bruno, k6, README examples). The integration suite does NOT use
+      # this port: it binds an ephemeral one via setup.ServerURL(), so the two
+      # never collide. Do not remove this mapping without updating those callers.
+      - "3333:3333"
     environment:
       - DB_HOST=postgres
       - BROKER_HOST=rabbitmq
-    restart: on-failure # Restarts the container when it crashes, waiting RabbitMQ...
+    # Not "on-failure": a crash-looping container silently reclaims 3333 and
+    # hides the failure it is looping on.
+    restart: "no"
     depends_on:     # Add other services your app depends on (e.g., RabbitMQ)
       - postgres
       - rabbitmq
