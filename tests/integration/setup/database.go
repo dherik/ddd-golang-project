@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"strconv"
@@ -20,8 +19,16 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+const (
+	databaseName     = "test_db"
+	databaseUser     = "test_user"
+	databasePassword = "test_password"
+)
+
 var (
-	setupDBOnce       sync.Once
+	setupDBOnce sync.Once
+	setupDBErr  error
+
 	PostgresContainer *postgres.PostgresContainer
 	Datasource        persistence.Datasource
 	Ctx               context.Context
@@ -29,93 +36,120 @@ var (
 
 var db *sql.DB
 
-type DatabaseIT struct {
-	persistence.Datasource
-}
-
-func SetupDatabase() {
+// SetupDatabase starts the database container, applies the schema, and opens
+// the connection the harness seeds and truncates through.
+//
+// It returns an error rather than exiting the process, so the suite fails with
+// its own name attached and the rest of the run still reports. The one-time
+// initialisation is preserved, so a failure is memoised and returned identically
+// on every later call.
+func SetupDatabase() error {
 	setupDBOnce.Do(func() {
-		slog.Info("Initializing the database...")
-
-		datasource := persistence.Datasource{
-			User:     "test_user",
-			Password: "test_password",
-			Name:     "test_db",
-		}
-
-		slog.Info("Starting docker")
-
-		ctx := context.Background()
-		postgresContainer, err := postgres.RunContainer(ctx,
-			testcontainers.WithImage("docker.io/postgres:16.2-alpine"),
-			// postgres.WithInitScripts(filepath.Join("testdata", "init-user-db.sh")),
-			// postgres.WithConfigFile(filepath.Join("testdata", "my-postgres.conf")),
-			postgres.WithDatabase("test_db"),
-			postgres.WithUsername("test_user"),
-			postgres.WithPassword("test_password"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(5*time.Second)),
-		)
-		if err != nil {
-			log.Fatalf("failed to start container: %s", err)
-		}
-
-		//FIXME it's ugly
-		host, _ := postgresContainer.Host(ctx)
-		datasource.Host = host
-		portNat, _ := postgresContainer.MappedPort(ctx, "5432")
-		port, _ := strconv.Atoi(portNat.Port())
-		datasource.Port = port
-		databaseUrl, _ := postgresContainer.ConnectionString(ctx, "sslmode=disable")
-
-		slog.Info(fmt.Sprintf("Connecting to database on url: %s", databaseUrl))
-
-		db, err = sql.Open("postgres", databaseUrl)
-		if err != nil {
-			log.Fatalf("Could not open SQL connection: %s", err)
-		}
-
-		slog.Info("Database for integration tests is up and running!")
-
-		LoadDDL()
-
-		PostgresContainer = postgresContainer
-		Ctx = ctx
-		Datasource = datasource
+		setupDBErr = setupDatabase()
 	})
+
+	return setupDBErr
 }
 
-func LoadDDL() {
-	query, err := os.ReadFile("../../init_ddl.sql")
-	slog.Debug("Load DDL file: " + string(query))
+func setupDatabase() error {
+	slog.Info("Initializing the database...")
+
+	datasource := persistence.Datasource{
+		User:     databaseUser,
+		Password: databasePassword,
+		Name:     databaseName,
+	}
+
+	ctx := context.Background()
+
+	postgresContainer, err := postgres.Run(ctx,
+		"docker.io/postgres:16.2-alpine",
+		postgres.WithDatabase(databaseName),
+		postgres.WithUsername(databaseUser),
+		postgres.WithPassword(databasePassword),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(5*time.Second)),
+	)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to start the PostgreSQL container: %w", err)
 	}
-	if _, err := db.Exec(string(query)); err != nil {
-		panic(err)
-	}
-}
 
-func LoadDML() {
-	query, err := os.ReadFile("../../init_dml.sql")
-	slog.Debug("Load DML file: " + string(query))
+	host, err := postgresContainer.Host(ctx)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to resolve the PostgreSQL container host: %w", err)
 	}
-	if _, err := db.Exec(string(query)); err != nil {
-		panic(err)
+
+	portNat, err := postgresContainer.MappedPort(ctx, "5432")
+	if err != nil {
+		return fmt.Errorf("failed to resolve the PostgreSQL container port: %w", err)
 	}
+
+	port, err := strconv.Atoi(portNat.Port())
+	if err != nil {
+		return fmt.Errorf("failed to parse the PostgreSQL container port %q: %w", portNat.Port(), err)
+	}
+
+	datasource.Host = host
+	datasource.Port = port
+
+	// The harness seeds the same database the application under test reads, so
+	// it opens it through the production connection-string builder. That keeps
+	// one description of the test database and puts the builder under test.
+	connectionString := datasource.ConnectionString()
+	slog.Debug("Connecting to the test database", "url", connectionString)
+
+	db, err = sql.Open("postgres", connectionString)
+	if err != nil {
+		return fmt.Errorf("could not open the database connection: %w", err)
+	}
+
+	if err := LoadDDL(); err != nil {
+		return err
+	}
+
+	slog.Info("Database for integration tests is up and running!")
+
+	PostgresContainer = postgresContainer
+	Ctx = ctx
+	Datasource = datasource
+
+	return nil
 }
 
-func ResetData() {
+// LoadDDL applies the schema to the test database.
+func LoadDDL() error {
+	return loadSQLFile("../../init_ddl.sql")
+}
 
+// LoadDML applies the seed data to the test database.
+func LoadDML() error {
+	return loadSQLFile("../../init_dml.sql")
+}
+
+func loadSQLFile(path string) error {
+	query, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed reading %s: %w", path, err)
+	}
+
+	slog.Debug("Loading SQL file", "path", path)
+
+	if _, err := db.Exec(string(query)); err != nil {
+		return fmt.Errorf("failed applying %s: %w", path, err)
+	}
+
+	return nil
+}
+
+// ResetData truncates every table so the next test starts from a known empty
+// database. Truncating rather than dropping keeps the schema the harness applied.
+func ResetData() error {
 	// Retrieve a list of all tables in the database
 	rows, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")
 	if err != nil {
-		// t.Fatalf("Error querying tables: %v", err)
-		panic(err)
+		return fmt.Errorf("failed querying tables: %w", err)
 	}
 	defer rows.Close()
 
@@ -124,41 +158,40 @@ func ResetData() {
 	for rows.Next() {
 		var tableName string
 		if err := rows.Scan(&tableName); err != nil {
-			// t.Fatalf("Error scanning table name: %v", err)
-			panic(err)
-
+			return fmt.Errorf("failed scanning table name: %w", err)
 		}
 		tables = append(tables, tableName)
 	}
 
 	// Check for errors from iterating over rows
 	if err := rows.Err(); err != nil {
-		// t.Fatalf("Error iterating over table names: %v", err)
-		panic(err)
+		return fmt.Errorf("failed iterating over table names: %w", err)
 	}
 
 	// If there are tables, truncate them
-	if len(tables) > 0 {
-		// Build the SQL query to truncate tables
-		query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY CASCADE", strings.Join(tables, ", "))
-
-		// Execute the dynamic SQL query to truncate tables
-		_, err := db.Exec(query)
-		if err != nil {
-			// t.Fatalf("Error resetting database: %v", err)
-			panic(err)
-		}
-
-		slog.Info("Database reset successful")
-	} else {
+	if len(tables) == 0 {
 		slog.Info("No tables found in the database")
+		return nil
 	}
+
+	query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY CASCADE", strings.Join(tables, ", "))
+
+	if _, err := db.Exec(query); err != nil {
+		return fmt.Errorf("failed resetting the database: %w", err)
+	}
+
+	slog.Info("Database reset successful")
+
+	return nil
 }
 
-func StopDatabase() {
-	log.Println("Tear down container")
+// StopDatabase terminates the database container.
+func StopDatabase() error {
+	slog.Info("Tearing down the PostgreSQL container")
 
 	if err := PostgresContainer.Terminate(Ctx); err != nil {
-		log.Fatalf("failed to terminate postgresql container: %s", err)
+		return fmt.Errorf("failed to terminate the PostgreSQL container: %w", err)
 	}
+
+	return nil
 }

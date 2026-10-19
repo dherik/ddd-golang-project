@@ -15,8 +15,8 @@ type IntegrationTestSuite struct {
 // Will run after each test in the Suites
 func (suite *TaskTestSuite) SetupTest() {
 	slog.Info("Reseting database for the next test")
-	setup.ResetData()
-	setup.LoadDML()
+	suite.Require().NoError(setup.ResetData())
+	suite.Require().NoError(setup.LoadDML())
 }
 
 // In order for 'go test' to run this suite, we need to create
@@ -34,6 +34,8 @@ func TestExecuteAllSuites(t *testing.T) {
 	suite.Run(t, new(TaskTestSuite))
 	suite.Run(t, new(UserTestSuite))
 
-	setup.StopIntegrationTest()
+	if err := setup.StopIntegrationTest(); err != nil {
+		t.Errorf("failed to tear down integration tests: %v", err)
+	}
 
 }
