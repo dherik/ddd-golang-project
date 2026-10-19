@@ -3,7 +3,6 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -153,8 +152,7 @@ func addUser(t *testing.T, payload api.UserRequest, token string) *http.Response
 		t.Fatalf("Error encoding JSON: %v", err)
 	}
 
-	//TODO duplicated port, get from s.port (parametrized)
-	url := fmt.Sprintf("http://localhost:%d/users", 3333)
+	url := setup.ServerURL() + "/users"
 	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody))
 	if err != nil {
 		t.Fatalf("unexpected error creating request: %v", err)
@@ -183,7 +181,7 @@ func login(username, password string) (*http.Response, []byte, error) {
 		log.Fatalf("failed to marshal JSON: %s", err.Error())
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "http://localhost:3333/login", bytes.NewBuffer(jsonData)) //FIXME port as parameter
+	req, err := http.NewRequest(http.MethodPost, setup.ServerURL()+"/login", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Fatalf("failed to create the login request: %s", err.Error())
 	}

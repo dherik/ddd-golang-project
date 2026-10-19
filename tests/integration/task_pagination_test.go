@@ -13,12 +13,16 @@ import (
 	"github.com/dherik/ddd-golang-project/tests/integration/setup"
 )
 
-const tasksURL = "http://localhost:3333/tasks"
+// tasksURL resolves against the server started by the suite, whose port is
+// chosen at runtime.
+func tasksURL() string {
+	return setup.ServerURL() + "/tasks"
+}
 
 func (s *TaskTestSuite) requestTaskList(token string, params url.Values) (int, []byte) {
 	s.T().Helper()
 
-	req, err := http.NewRequest(http.MethodGet, tasksURL+"?"+params.Encode(), nil)
+	req, err := http.NewRequest(http.MethodGet, tasksURL()+"?"+params.Encode(), nil)
 	s.Require().NoError(err)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -405,7 +409,7 @@ func (s *TaskTestSuite) TestPaginationInsertDriftAndEndDatePinning() {
 }
 
 func (s *TaskTestSuite) TestPaginationRequiresAuthentication() {
-	req, err := http.NewRequest(http.MethodGet, tasksURL, nil)
+	req, err := http.NewRequest(http.MethodGet, tasksURL(), nil)
 	s.Require().NoError(err)
 
 	response, err := http.DefaultClient.Do(req)

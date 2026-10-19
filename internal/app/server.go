@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"slices"
@@ -27,6 +28,13 @@ type Server struct {
 	RabbitMQDataSource rabbitmq.RabbitMQDataSource
 	HTTPPort           int
 	JWTSecret          string
+
+	// Listener, when set, is served instead of binding HTTPPort. Callers that
+	// need to know the effective port before the server is serving — the
+	// integration tests, which must not collide with a locally running app or
+	// the docker-compose stack — create the listener themselves and read the
+	// port back from it. When nil, HTTPPort is bound as usual.
+	Listener net.Listener
 }
 
 const requestIDKey = "request_id"
@@ -93,10 +101,19 @@ func (s *Server) Start() {
 	)
 
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.HTTPPort),
 		Handler: handler,
 	}
 
+	if s.Listener != nil {
+		// The caller owns the listener, so it already knows the bound address.
+		slog.Info("Initializing the HTTP server...", "addr", s.Listener.Addr().String())
+		if err := httpServer.Serve(s.Listener); err != nil {
+			log.Fatalf("HTTP server failed: %v", err)
+		}
+		return
+	}
+
+	httpServer.Addr = fmt.Sprintf(":%d", s.HTTPPort)
 	slog.Info("Initializing the HTTP server...", "port", s.HTTPPort)
 	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)

@@ -27,7 +27,7 @@ func Login(username, password string) string {
 		log.Fatalf("failed to marshal JSON: %s", err.Error())
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "http://localhost:3333/login", bytes.NewBuffer(jsonData)) //FIXME port as parameter
+	req, err := http.NewRequest(http.MethodPost, ServerURL()+"/login", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Fatalf("failed to create the login request: %s", err.Error())
 	}

@@ -27,7 +27,9 @@ func TestExecuteAllSuites(t *testing.T) {
 		t.Skip("Skip integration tests execution")
 	}
 
-	setup.SetupIntegrationTest()
+	if err := setup.SetupIntegrationTest(); err != nil {
+		t.Fatalf("failed to set up integration tests: %v", err)
+	}
 
 	suite.Run(t, new(TaskTestSuite))
 	suite.Run(t, new(UserTestSuite))

@@ -2,7 +2,6 @@ package integration
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -103,7 +102,7 @@ func waitForPaymentReminder(s *TaskTestSuite, token, description string) *api.Ta
 func findTaskByDescription(s *TaskTestSuite, token, description string) *api.TaskResponse {
 	s.T().Helper()
 
-	url := fmt.Sprintf("http://localhost:%d/tasks", 3333)
+	url := setup.ServerURL() + "/tasks"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	s.NoError(err)
 	req.Header.Set("Authorization", "Bearer "+token)

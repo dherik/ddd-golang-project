@@ -27,9 +27,9 @@ func (s *TaskTestSuite) TestGetByDate() {
 	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 
-	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
+	url := fmt.Sprintf("%s/tasks?startDate=%s&endDate=%s", setup.ServerURL(), startDate, endDate)
 	slog.Info("request url", "url", url)
-	req, err := http.NewRequest(http.MethodGet, url, nil) //TODO duplicated port, get from s.port (parametrized)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	s.NoError(err)
 
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -61,7 +61,7 @@ func (s *TaskTestSuite) TestGetByID() {
 
 	token := setup.Login("admin", "some_password")
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/tasks/%d", 3333, 1), nil) //TODO duplicated port, get from s.port (parametrized)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/tasks/%d", setup.ServerURL(), 1), nil) //TODO duplicated port, get from s.port (parametrized)
 	s.NoError(err)
 
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -111,8 +111,7 @@ func addTask(s *TaskTestSuite, payload any, token string) *http.Response {
 		s.T().Fatalf("Error encoding JSON: %v", err)
 	}
 
-	//TODO duplicated port, get from s.port (parametrized)
-	url := fmt.Sprintf("http://localhost:%d/tasks", 3333)
+	url := setup.ServerURL() + "/tasks"
 	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody))
 	s.NoError(err)
 
@@ -139,8 +138,8 @@ func (s *TaskTestSuite) TestCannotAddTaskWhenDescriptionEmpty() {
 		s.T().Fatalf("Error encoding JSON: %v", err)
 	}
 
-	url := fmt.Sprintf("http://localhost:%d/tasks", 3333)
-	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody)) //TODO duplicated port, get from s.port (parametrized)
+	url := setup.ServerURL() + "/tasks"
+	req, err := http.NewRequest("POST", url, bytes.NewReader(requestBody))
 	s.NoError(err)
 
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -164,7 +163,7 @@ func (s *TaskTestSuite) TestCannotAddTaskWhenDescriptionEmpty() {
 func getTask(s *TaskTestSuite, id int, token string) *http.Response {
 	s.T().Helper()
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/tasks/%d", 3333, id), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/tasks/%d", setup.ServerURL(), id), nil)
 	s.NoError(err)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -207,7 +206,7 @@ func (s *TaskTestSuite) TestUserOnlySeesOwnTasks() {
 
 	startDate := time.Date(2024, 02, 14, 20, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
 	endDate := time.Date(2024, 02, 16, 23, 34, 58, 651387237, time.UTC).Format(time.RFC3339)
-	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
+	url := fmt.Sprintf("%s/tasks?startDate=%s&endDate=%s", setup.ServerURL(), startDate, endDate)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	s.NoError(err)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -249,7 +248,7 @@ func (s *TaskTestSuite) TestCreateTaskIgnoresUserIdFromBody() {
 
 	startDate := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
 	endDate := time.Now().UTC().Add(time.Hour).Format(time.RFC3339)
-	url := fmt.Sprintf("http://localhost:%d/tasks?startDate=%s&endDate=%s", 3333, startDate, endDate)
+	url := fmt.Sprintf("%s/tasks?startDate=%s&endDate=%s", setup.ServerURL(), startDate, endDate)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	s.NoError(err)
 	req.Header.Set("Authorization", "Bearer "+token)
