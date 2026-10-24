@@ -32,6 +32,12 @@ _Avoid_: payment command, billing request
 A task created by this service in reaction to an invoice due event, telling its user to pay the invoice by the due date.
 _Avoid_: billing task, invoice task
 
+### Task events
+
+**Task created event**:
+A fact this service publishes stating that a task came into existence for one of its users, carrying the task's identity, description and creation time. It states a fact and names no action.
+_Avoid_: task notification, task message
+
 ### Pagination
 
 **Task page**:
