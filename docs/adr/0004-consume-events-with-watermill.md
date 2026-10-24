@@ -24,3 +24,5 @@ The hand-written listener carried manual-ack bookkeeping correctly but was about
 - A payload pass-through marshaler replaces the toolkit's default: only the payload is our contract, so a non-string header must never turn a valid event into poison.
 - Watermill's topic-to-queue name mapping is pinned by generators; a mismatch fails against the durable queues rather than silently redeclaring them, and the integration suite exercises the exact queue and dead-letter names end to end.
 - Watermill's logger adapter wraps our slog logger so consumption logs stay in one format. The router is cancellation-aware: cancelling its context stops consumption cleanly; wiring process signals to that cancellation remains a separate lifecycle concern.
+
+Update: the consume-only scope was superseded for publishing by [ADR-0005](0005-publish-task-created-events.md) — a Watermill AMQP publisher now announces task-created events over the same broker. The narrower stance still holds for the rest: no CQRS or event-bus components.
