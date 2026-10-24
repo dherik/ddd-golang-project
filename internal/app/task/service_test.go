@@ -27,8 +27,9 @@ func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Tas
 	return args.Get(0).(domain.Task), args.Error(1)
 }
 
-func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) error {
-	return m.Called(userId, task).Error(0)
+func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+	args := m.Called(userId, task)
+	return args.Get(0).(domain.Task), args.Error(1)
 }
 
 func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
@@ -42,7 +43,13 @@ func TestService_CreateTask(t *testing.T) {
 		return task.UserId == "1" &&
 			task.Description == "some description" &&
 			task.CreatedAt.Equal(testClock.now)
-	})).Return(nil)
+	// the persisted task carries the database-generated id; the constructed one does not
+	})).Return(domain.Task{
+		Id:          7,
+		UserId:      "1",
+		Description: "some description",
+		CreatedAt:   testClock.now,
+	}, nil)
 
 	err := NewService(mockRepo, testClock).CreateTask("1", "some description")
 

@@ -25,8 +25,9 @@ func (m *mockTaskRepository) GetByIDAndUserID(id int, userId string) (domain.Tas
 	return args.Get(0).(domain.Task), args.Error(1)
 }
 
-func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) error {
-	return m.Called(userId, task).Error(0)
+func (m *mockTaskRepository) AddTaskToUser(userId string, task domain.Task) (domain.Task, error) {
+	args := m.Called(userId, task)
+	return args.Get(0).(domain.Task), args.Error(1)
 }
 
 func (m *mockTaskRepository) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
@@ -170,7 +171,7 @@ func TestTaskHandler_CreateTaskIgnoresUserIdFromBody(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
 		return task.UserId == "1" && task.Description == "Task from token"
-	})).Return(nil)
+	})).Return(domain.Task{}, nil)
 
 	svc := task.NewService(mockRepo, fixedClock{})
 	handler := NewTaskHandler(svc)

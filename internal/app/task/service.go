@@ -24,7 +24,7 @@ func (s *Service) CreateTask(userId, description string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.taskRepository.AddTaskToUser(userId, task); err != nil {
+	if _, err := s.taskRepository.AddTaskToUser(userId, task); err != nil {
 		return fmt.Errorf("failed to add task to user: %w", err)
 	}
 	return nil

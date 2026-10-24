@@ -17,7 +17,7 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
 		return task.UserId == "1" && task.Description == "Pay invoice INV-42 by 2026-11-01"
-	})).Return(nil)
+	})).Return(domain.Task{}, nil)
 
 	handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
@@ -65,7 +65,7 @@ func TestInvoiceDueEventReminderWording(t *testing.T) {
 			mockRepo := new(mockTaskRepository)
 			mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
 				return task.Description == tt.description
-			})).Return(nil)
+			})).Return(domain.Task{}, nil)
 
 			handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
@@ -126,7 +126,7 @@ func TestInvoiceDueEventConstructionAndPersistenceFailuresAreTransient(t *testin
 	t.Run("persistence failure", func(t *testing.T) {
 		mockRepo := new(mockTaskRepository)
 		mockRepo.On("AddTaskToUser", mock.Anything, mock.Anything).
-			Return(fmt.Errorf("database unavailable"))
+			Return(domain.Task{}, fmt.Errorf("database unavailable"))
 		handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}))
 
 		err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-1","userId":1,"dueDate":"2026-11-01"}`))
