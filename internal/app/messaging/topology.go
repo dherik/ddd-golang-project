@@ -10,10 +10,12 @@ import (
 // calendar and billing services and with its own dead-letter queues; every
 // other place in the codebase imports them instead of restating the strings.
 const (
-	ExchangeCalendar     = "calendar"
-	ExchangeBilling      = "billing"
-	RoutingKeyBirthday   = "birthday"
-	RoutingKeyInvoiceDue = "invoice-due"
+	ExchangeCalendar      = "calendar"
+	ExchangeBilling       = "billing"
+	ExchangeTask          = "task"
+	RoutingKeyBirthday    = "birthday"
+	RoutingKeyInvoiceDue  = "invoice-due"
+	RoutingKeyTaskCreated = "task-created"
 
 	QueueCalendarBirthday  = "todo-service.events.calendar.birthday"
 	QueueBillingInvoiceDue = "todo-service.events.billing.invoice-due"
@@ -45,6 +47,13 @@ func Declare(conn *rabbitmq.RabbitMQ) error {
 	}
 	if err := conn.DeclareExchange(ExchangeBilling, rabbitmq.ExchangeDirect); err != nil {
 		return fmt.Errorf("failed declaring the %s exchange: %w", ExchangeBilling, err)
+	}
+
+	// The task exchange is this service's own announcement channel: it
+	// publishes task created facts on it and declares no downstream queues or
+	// bindings — consuming services own those (see ADR-0005).
+	if err := conn.DeclareExchange(ExchangeTask, rabbitmq.ExchangeDirect); err != nil {
+		return fmt.Errorf("failed declaring the %s exchange: %w", ExchangeTask, err)
 	}
 
 	deadLetterArgs := rabbitmq.DeadLetterArgs(DeadLetterExchange)
