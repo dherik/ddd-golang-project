@@ -50,12 +50,6 @@ func (s *Server) Start() {
 	userRepository := persistence.NewUserRepository(pgsql)
 	hasher := security.NewBcryptHasher()
 	timeSource := clock.NewSystemClock()
-	taskService := task.NewService(taskRepository, timeSource)
-	userService := user.NewService(userRepository, hasher, timeSource)
-	taskHandler := api.NewTaskHandler(taskService)
-	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
-	userHandler := api.NewUserHandler(userService)
-	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
 	setupSlog()
 
@@ -71,6 +65,19 @@ func (s *Server) Start() {
 	if err := messaging.Declare(rabbitMQ); err != nil {
 		log.Fatalf("Failed to declare the broker topology: %v", err)
 	}
+
+	taskPublisher, err := messaging.NewPublisher(s.RabbitMQDataSource.ConnectionString())
+	if err != nil {
+		log.Fatalf("Failed to create the event publisher: %v", err)
+	}
+	defer taskPublisher.Close()
+
+	taskService := task.NewService(taskRepository, timeSource, taskPublisher)
+	userService := user.NewService(userRepository, hasher, timeSource)
+	taskHandler := api.NewTaskHandler(taskService)
+	loginHandler := api.NewLoginHandler(userService, s.JWTSecret)
+	userHandler := api.NewUserHandler(userService)
+	routes := api.NewRouter(taskHandler, loginHandler, userHandler, s.JWTSecret)
 
 	consumer, err := messaging.NewConsumer(s.RabbitMQDataSource.ConnectionString())
 	if err != nil {

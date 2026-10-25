@@ -1,6 +1,7 @@
 package task
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -12,6 +13,15 @@ import (
 
 type mockTaskRepository struct {
 	mock.Mock
+}
+
+type mockTaskPublisher struct {
+	mock.Mock
+}
+
+func (m *mockTaskPublisher) PublishTaskCreated(event TaskCreated) error {
+	args := m.Called(event)
+	return args.Error(0)
 }
 
 type fixedClock struct {
@@ -51,19 +61,80 @@ func TestService_CreateTask(t *testing.T) {
 		CreatedAt:   testClock.now,
 	}, nil)
 
-	err := NewService(mockRepo, testClock).CreateTask("1", "some description")
+	// The announcement is this test's neighbour, not its subject: every
+	// successful save publishes, and publishing is asserted in its own test.
+	mockPublisher := new(mockTaskPublisher)
+	mockPublisher.On("PublishTaskCreated", mock.Anything).Return(nil)
+
+	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
 
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
 
+// The fact is built from the task the repository returned: its database id
+// (7) exists only on the persisted task, never on the constructed one.
+func TestService_CreateTask_PublishesTaskCreatedFact(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(domain.Task{
+		Id:          7,
+		UserId:      "1",
+		Description: "some description",
+		CreatedAt:   testClock.now,
+	}, nil)
+
+	mockPublisher := new(mockTaskPublisher)
+	mockPublisher.On("PublishTaskCreated", TaskCreated{
+		TaskId:      7,
+		UserId:      1,
+		Description: "some description",
+		CreatedAt:   testClock.now,
+	}).Return(nil)
+
+	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
+
+	require.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+	mockPublisher.AssertExpectations(t)
+}
+
 func TestService_CreateTask_InvalidDescription(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 
-	err := NewService(mockRepo, testClock).CreateTask("1", "")
+	err := NewService(mockRepo, testClock, new(mockTaskPublisher)).CreateTask("1", "")
 
 	require.ErrorIs(t, err, domain.ErrDescriptionInvalid)
 	mockRepo.AssertNotCalled(t, "AddTaskToUser", mock.Anything, mock.Anything)
+}
+
+func TestService_CreateTask_DoesNotPublishWhenValidationFails(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockPublisher := new(mockTaskPublisher)
+
+	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "")
+
+	require.ErrorIs(t, err, domain.ErrDescriptionInvalid)
+	mockRepo.AssertNotCalled(t, "AddTaskToUser", mock.Anything, mock.Anything)
+	mockPublisher.AssertNotCalled(t, "PublishTaskCreated", mock.Anything)
+}
+
+func TestService_CreateTask_SwallowsPublishFailure(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(domain.Task{
+		Id:          7,
+		UserId:      "1",
+		Description: "some description",
+		CreatedAt:   testClock.now,
+	}, nil)
+
+	mockPublisher := new(mockTaskPublisher)
+	mockPublisher.On("PublishTaskCreated", mock.Anything).Return(errors.New("broker unavailable"))
+
+	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
+
+	// The save is the truth; the announcement is a side effect (ADR-0005).
+	require.NoError(t, err)
+	mockPublisher.AssertExpectations(t)
 }
 
 func TestService_FindTasks(t *testing.T) {
@@ -78,7 +149,7 @@ func TestService_FindTasks(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{Tasks: expectedTasks, HasMore: false}, nil)
 
-	svc := NewService(mockRepo, testClock)
+	svc := NewService(mockRepo, testClock, new(mockTaskPublisher))
 	page, err := svc.FindTasks(query)
 
 	require.NoError(t, err)
@@ -98,7 +169,7 @@ func TestService_FindTasks_RepositoryError(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("FindTasks", query).Return(domain.TaskPage{}, assert.AnError)
 
-	svc := NewService(mockRepo, testClock)
+	svc := NewService(mockRepo, testClock, new(mockTaskPublisher))
 	_, err := svc.FindTasks(query)
 
 	require.Error(t, err)
@@ -112,7 +183,7 @@ func TestService_GetTaskByID(t *testing.T) {
 		Id: 42, UserId: "1", Description: "Task 42", CreatedAt: now,
 	}, nil)
 
-	svc := NewService(mockRepo, testClock)
+	svc := NewService(mockRepo, testClock, new(mockTaskPublisher))
 	task, err := svc.GetTaskByID("1", 42)
 
 	require.NoError(t, err)
@@ -126,7 +197,7 @@ func TestService_GetTaskByID_NotFound(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("GetByIDAndUserID", 42, "1").Return(domain.Task{}, domain.ErrTaskNotFound)
 
-	svc := NewService(mockRepo, testClock)
+	svc := NewService(mockRepo, testClock, new(mockTaskPublisher))
 	_, err := svc.GetTaskByID("1", 42)
 
 	assert.ErrorIs(t, err, domain.ErrTaskNotFound)

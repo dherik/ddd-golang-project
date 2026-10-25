@@ -3,7 +3,9 @@ package api
 import (
 	"time"
 
+	"github.com/dherik/ddd-golang-project/internal/app/task"
 	"github.com/dherik/ddd-golang-project/internal/domain"
+	"github.com/stretchr/testify/mock"
 )
 
 type fixedClock struct {
@@ -23,6 +25,23 @@ func (fakePasswordHasher) Verify(hash, plainPassword string) bool {
 }
 
 var testClock = fixedClock{now: time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)}
+
+type mockTaskPublisher struct {
+	mock.Mock
+}
+
+func (m *mockTaskPublisher) PublishTaskCreated(event task.TaskCreated) error {
+	args := m.Called(event)
+	return args.Error(0)
+}
+
+// silentTaskPublisher accepts any announcement and succeeds, for tests whose
+// subject is the HTTP contract rather than the announcement itself.
+func silentTaskPublisher() *mockTaskPublisher {
+	m := new(mockTaskPublisher)
+	m.On("PublishTaskCreated", mock.Anything).Return(nil)
+	return m
+}
 
 type fakeUserRepository struct {
 	findByUsername func(username string) (domain.User, error)

@@ -3,6 +3,7 @@ package task
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/dherik/ddd-golang-project/internal/domain"
 )
@@ -13,10 +14,11 @@ import (
 type Service struct {
 	taskRepository domain.TaskRepository
 	clock          domain.Clock
+	publisher      Publisher
 }
 
-func NewService(taskRepository domain.TaskRepository, clock domain.Clock) *Service {
-	return &Service{taskRepository: taskRepository, clock: clock}
+func NewService(taskRepository domain.TaskRepository, clock domain.Clock, publisher Publisher) *Service {
+	return &Service{taskRepository: taskRepository, clock: clock, publisher: publisher}
 }
 
 func (s *Service) CreateTask(userId, description string) error {
@@ -24,10 +26,34 @@ func (s *Service) CreateTask(userId, description string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.taskRepository.AddTaskToUser(userId, task); err != nil {
+	saved, err := s.taskRepository.AddTaskToUser(userId, task)
+	if err != nil {
 		return fmt.Errorf("failed to add task to user: %w", err)
 	}
+	s.publishTaskCreated(saved)
 	return nil
+}
+
+// publishTaskCreated announces the saved task as one task created fact.
+// Publication is best-effort (ADR-0005): a failure is logged and swallowed,
+// so the operation's result reflects the database write alone — on the
+// messaging path a failure here must not dead-letter the triggering event.
+func (s *Service) publishTaskCreated(saved domain.Task) {
+	userId, err := strconv.Atoi(saved.UserId)
+	if err != nil {
+		slog.Error("failed converting the user id for the task created event",
+			"taskId", saved.Id, "userId", saved.UserId, "err", err)
+		return
+	}
+	event := TaskCreated{
+		TaskId:      saved.Id,
+		UserId:      userId,
+		Description: saved.Description,
+		CreatedAt:   saved.CreatedAt,
+	}
+	if err := s.publisher.PublishTaskCreated(event); err != nil {
+		slog.Error("failed publishing the task created event", "taskId", saved.Id, "err", err)
+	}
 }
 
 func (s *Service) FindTasks(query domain.TaskQuery) (domain.TaskPage, error) {
