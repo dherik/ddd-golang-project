@@ -28,6 +28,29 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
+// One handled invoice due event announces its reminder task exactly once: a
+// second announcement on a single event would be a duplicate fact for
+// consumers counting on the task exchange (ADR-0005).
+func TestInvoiceDueEventAnnouncesReminderTaskOnce(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(domain.Task{
+		Id:          7,
+		UserId:      "1",
+		Description: "Pay invoice INV-42 by 2026-11-01",
+	}, nil)
+
+	publisher := new(mockTaskPublisher)
+	publisher.On("PublishTaskCreated", mock.Anything).Return(nil).Once()
+
+	handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}, publisher))
+
+	err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`))
+
+	require.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+	publisher.AssertExpectations(t)
+}
+
 // A failed publish must not fail the handler: failing it would nack the
 // invoice due event into the dead-letter queue, and its redelivery would
 // create a duplicate reminder just to retry an announcement for a task that

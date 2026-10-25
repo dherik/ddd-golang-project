@@ -89,7 +89,35 @@ func TestService_CreateTask_PublishesTaskCreatedFact(t *testing.T) {
 		UserId:      1,
 		Description: "some description",
 		CreatedAt:   testClock.now,
-	}).Return(nil)
+	}).Return(nil).Once()
+
+	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
+
+	require.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+	mockPublisher.AssertExpectations(t)
+}
+
+// A database session in a non-UTC timezone hands the persisted task back with
+// that timezone on its timestamp (RETURNING created_at); the fact's contract
+// still demands an RFC 3339 UTC createdAt.
+func TestService_CreateTask_PublishesCreatedAtInUTC(t *testing.T) {
+	nonUTC := time.FixedZone("UTC+2", 2*60*60)
+	persisted := domain.Task{
+		Id:          7,
+		UserId:      "1",
+		Description: "some description",
+		CreatedAt:   testClock.now.In(nonUTC),
+	}
+
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(persisted, nil)
+
+	mockPublisher := new(mockTaskPublisher)
+	mockPublisher.On("PublishTaskCreated", mock.MatchedBy(func(event TaskCreated) bool {
+		return event.CreatedAt.Equal(persisted.CreatedAt) &&
+			event.CreatedAt.Location() == time.UTC
+	})).Return(nil)
 
 	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
 
@@ -135,6 +163,27 @@ func TestService_CreateTask_SwallowsPublishFailure(t *testing.T) {
 	// The save is the truth; the announcement is a side effect (ADR-0005).
 	require.NoError(t, err)
 	mockPublisher.AssertExpectations(t)
+}
+
+// The fact's owner id is the numeric projection of the internal string user
+// id; a persisted id that isn't numeric has no projection, so the save's
+// result stands while the announcement is skipped (ADR-0005).
+func TestService_CreateTask_SkipsAnnouncementForNonNumericUserId(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(domain.Task{
+		Id:          7,
+		UserId:      "not-a-number",
+		Description: "some description",
+		CreatedAt:   testClock.now,
+	}, nil)
+
+	mockPublisher := new(mockTaskPublisher)
+
+	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
+
+	require.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+	mockPublisher.AssertNotCalled(t, "PublishTaskCreated", mock.Anything)
 }
 
 func TestService_FindTasks(t *testing.T) {

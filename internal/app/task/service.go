@@ -49,7 +49,10 @@ func (s *Service) publishTaskCreated(saved domain.Task) {
 		TaskId:      saved.Id,
 		UserId:      userId,
 		Description: saved.Description,
-		CreatedAt:   saved.CreatedAt,
+		// The persisted timestamp arrives in the database session's timezone
+		// (RETURNING created_at); the fact's contract is RFC 3339 UTC, the
+		// same normalization the domain applies when constructing the task.
+		CreatedAt: saved.CreatedAt.UTC(),
 	}
 	if err := s.publisher.PublishTaskCreated(event); err != nil {
 		slog.Error("failed publishing the task created event", "taskId", saved.Id, "err", err)
