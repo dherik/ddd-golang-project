@@ -30,7 +30,7 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 
 // One handled invoice due event announces its reminder task exactly once: a
 // second announcement on a single event would be a duplicate fact for
-// consumers counting on the task exchange (ADR-0005).
+// consumers counting on the task exchange.
 func TestInvoiceDueEventAnnouncesReminderTaskOnce(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(domain.Task{
@@ -54,7 +54,7 @@ func TestInvoiceDueEventAnnouncesReminderTaskOnce(t *testing.T) {
 // A failed publish must not fail the handler: failing it would nack the
 // invoice due event into the dead-letter queue, and its redelivery would
 // create a duplicate reminder just to retry an announcement for a task that
-// already exists (ADR-0005).
+// already exists.
 func TestInvoiceDueEventReminderCreatedWhenPublishingFails(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {

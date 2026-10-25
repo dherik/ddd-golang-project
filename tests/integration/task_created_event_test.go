@@ -16,11 +16,11 @@ import (
 )
 
 // taskCreatedTestQueue is the test-owned queue the task created contract is
-// asserted on. The application declares no downstream queues (ADR-0005); this
+// asserted on. The application declares no downstream queues; this
 // one exists only for this test.
 const taskCreatedTestQueue = "todo-service.test.task-created"
 
-// The contract test for ADR-0005: a task created through the real HTTP API
+// The contract test: a task created through the real HTTP API
 // arrives on the task exchange as exactly one flat JSON fact, on a queue this
 // test owns.
 func (s *TaskTestSuite) TestTaskCreatedEventPublishedWhenTaskCreatedOverHTTP() {

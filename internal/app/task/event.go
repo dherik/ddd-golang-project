@@ -5,8 +5,8 @@ import "time"
 // TaskCreated is the fact announced on the broker whenever a task comes into
 // existence — created through the HTTP API or as a payment reminder alike.
 // It is a flat, self-contained fact stating what happened and naming no
-// action; consumers own their reactions (see ADR-0005 and the glossary's
-// task created event). The JSON tags are the cross-service payload contract:
+// action; consumers own their reactions. The JSON tags are the cross-service
+// payload contract:
 // the owner's id is numeric to match the billing contract's user ids, a
 // conversion from the internal string representation made here, at the event
 // boundary, mirroring the inbound conversion.
@@ -18,7 +18,7 @@ type TaskCreated struct {
 }
 
 // Publisher is the seam for announcing task facts on the broker. The task
-// package defines it narrow: publication is best-effort (ADR-0005), so the
+// package defines it narrow: publication is best-effort, so the
 // service can swallow a failure and still report the save's result.
 type Publisher interface {
 	PublishTaskCreated(event TaskCreated) error

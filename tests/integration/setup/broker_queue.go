@@ -16,8 +16,8 @@ type BrokerMessage struct {
 
 // BindTestQueue declares a test-owned queue and binds it to the exchange with
 // the routing key, so a test can observe what the application publishes. The
-// application declares no downstream queues or bindings (ADR-0005); a queue
-// bound before a publish is what makes that publish observable.
+// application declares no downstream queues or bindings; a queue bound before
+// a publish is what makes that publish observable.
 func BindTestQueue(queueName, exchange, routingKey string) error {
 	conn, err := amqp.Dial(RabbitMQDataSource.ConnectionString())
 	if err != nil {

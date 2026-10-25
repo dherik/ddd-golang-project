@@ -51,7 +51,7 @@ func Declare(conn *rabbitmq.RabbitMQ) error {
 
 	// The task exchange is this service's own announcement channel: it
 	// publishes task created facts on it and declares no downstream queues or
-	// bindings — consuming services own those (see ADR-0005).
+	// bindings — consuming services own those.
 	if err := conn.DeclareExchange(ExchangeTask, rabbitmq.ExchangeDirect); err != nil {
 		return fmt.Errorf("failed declaring the %s exchange: %w", ExchangeTask, err)
 	}

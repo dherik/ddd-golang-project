@@ -24,9 +24,9 @@ var jsonMarshaler = wamqp.DefaultMarshaler{
 }
 
 // Publisher owns event publication: a Watermill AMQP publisher over its own
-// connection, symmetric with the consumer adoption (see ADR-0004 and
-// ADR-0005). The exchange is pinned in the config and the topology is
-// application-declared, so the publisher only publishes.
+// connection, symmetric with the consumer adoption. The exchange is pinned in
+// the config and the topology is application-declared, so the publisher only
+// publishes.
 type Publisher struct {
 	publisher *wamqp.Publisher
 }

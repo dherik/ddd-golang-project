@@ -160,14 +160,14 @@ func TestService_CreateTask_SwallowsPublishFailure(t *testing.T) {
 
 	err := NewService(mockRepo, testClock, mockPublisher).CreateTask("1", "some description")
 
-	// The save is the truth; the announcement is a side effect (ADR-0005).
+	// The save is the truth; the announcement is a side effect.
 	require.NoError(t, err)
 	mockPublisher.AssertExpectations(t)
 }
 
 // The fact's owner id is the numeric projection of the internal string user
 // id; a persisted id that isn't numeric has no projection, so the save's
-// result stands while the announcement is skipped (ADR-0005).
+// result stands while the announcement is skipped.
 func TestService_CreateTask_SkipsAnnouncementForNonNumericUserId(t *testing.T) {
 	mockRepo := new(mockTaskRepository)
 	mockRepo.On("AddTaskToUser", "1", mock.Anything).Return(domain.Task{

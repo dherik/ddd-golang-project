@@ -35,7 +35,7 @@ func (s *Service) CreateTask(userId, description string) error {
 }
 
 // publishTaskCreated announces the saved task as one task created fact.
-// Publication is best-effort (ADR-0005): a failure is logged and swallowed,
+// Publication is best-effort: a failure is logged and swallowed,
 // so the operation's result reflects the database write alone — on the
 // messaging path a failure here must not dead-letter the triggering event.
 func (s *Service) publishTaskCreated(saved domain.Task) {
