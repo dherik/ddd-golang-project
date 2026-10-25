@@ -1,6 +1,7 @@
 package messaging
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -25,6 +26,32 @@ func TestInvoiceDueEventCreatesReminderTask(t *testing.T) {
 
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+}
+
+// A failed publish must not fail the handler: failing it would nack the
+// invoice due event into the dead-letter queue, and its redelivery would
+// create a duplicate reminder just to retry an announcement for a task that
+// already exists (ADR-0005).
+func TestInvoiceDueEventReminderCreatedWhenPublishingFails(t *testing.T) {
+	mockRepo := new(mockTaskRepository)
+	mockRepo.On("AddTaskToUser", "1", mock.MatchedBy(func(task domain.Task) bool {
+		return task.UserId == "1" && task.Description == "Pay invoice INV-42 by 2026-11-01"
+	})).Return(domain.Task{
+		Id:          7,
+		UserId:      "1",
+		Description: "Pay invoice INV-42 by 2026-11-01",
+	}, nil)
+
+	failingPublisher := new(mockTaskPublisher)
+	failingPublisher.On("PublishTaskCreated", mock.Anything).Return(errors.New("broker unavailable"))
+
+	handler := NewInvoiceDueHandler(task.NewService(mockRepo, fixedClock{}, failingPublisher))
+
+	err := handler.HandleMessage(testMessage(`{"invoiceId":"INV-42","userId":1,"dueDate":"2026-11-01"}`))
+
+	require.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+	failingPublisher.AssertExpectations(t)
 }
 
 func TestInvoiceDueEventReminderWording(t *testing.T) {
